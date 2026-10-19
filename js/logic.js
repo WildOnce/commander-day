@@ -181,6 +181,8 @@ export function settle(g, now = Date.now()) {
   }
   const a = alive(g);
   if (!g.ended && g.seats.length > 1 && a.length <= 1) {
+    // the last one standing obviously beat whoever just fell (unless they conceded)
+    if (a.length === 1) for (const x of fresh) if (!x.out.by && x.out.cause !== 'concede') x.out.by = a[0].pid;
     g.ended = { at: now, reason: a.length === 1 ? 'win' : 'draw', placements: placements(g, 'win') };
   } else if (g.ended && g.ended.reason !== 'time' && g.ended.reason !== 'manual' && a.length > 1) {
     g.ended = null;

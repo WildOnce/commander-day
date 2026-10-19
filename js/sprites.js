@@ -85,9 +85,10 @@ export function sprite(name, px = 4, cls = '') {
 }
 
 /** Pixel confetti burst inside an element. */
-export function confetti(host, n = 40, colors = ['var(--fg)', 'var(--gold)', 'var(--mid)']) {
+export function confetti(host, n = 40, colors = ['var(--fg)', 'var(--gold)', 'var(--mid)'], fixed = false) {
+  colors = colors || ['var(--accent)', 'var(--gold)', 'var(--p1)', 'var(--p2)', 'var(--p3)'];
   const wrap = document.createElement('div');
-  wrap.className = 'confetti';
+  wrap.className = 'confetti' + (fixed ? ' fixed' : '');
   for (let i = 0; i < n; i++) {
     const s = document.createElement('i');
     s.style.left = Math.random() * 100 + '%';

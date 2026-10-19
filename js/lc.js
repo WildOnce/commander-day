@@ -270,10 +270,20 @@ function sheetHtml(g, ref, ctrl, nTop) {
   return `<div class="scrim" data-act="lc-close"></div><div class="sheet ${rot} ${still}" data-sheet="${key}">${body}</div>`;
 }
 
+const RESULT_DELAY = 2800; // let the last K.O. (skull → ghost) play before the victory screen
+
 function resultHtml(g, ref) {
   if (!g.ended) return '';
   const key = g.id + ':' + g.ended.at;
   if (A.dismissed[key]) return '';
+  const wait = RESULT_DELAY - (Date.now() - g.ended.at);
+  if (wait > 0 && !A.celebrated[key]) {
+    clearTimeout(A.resultT);
+    A.resultT = setTimeout(render, wait + 30);
+    return '';
+  }
+  // after the first paint the overlay must stay put on re-renders (no replayed entrance animations)
+  const still = A.celebrated[key] ? 'still' : '';
   const start = gameStart(g, ref.round);
   const pl = [...g.ended.placements].sort((a, b) => a.place - b.place);
   const last = Math.max(...pl.map((x) => x.place));
@@ -281,20 +291,22 @@ function resultHtml(g, ref) {
     const s = g.seats.find((y) => y.pid === x.pid);
     const spr = x.place === 1 ? (x.draw ? 'shield' : 'trophy') : x.place === last ? 'skull' : 'sword';
     const info = s?.out ? `K.O. ${clock(s.out.at - start)}` : `${s?.life} ♥`;
-    return `<div class="rank"><span class="p ${x.place === 1 ? 'gold' : x.place === last ? 'alert' : ''}">${x.place}.</span>${sprite(spr, 3, x.place === 1 ? 'bob' : '')}
+    return `<div class="rank stage" style="--d:${0.9 + pl.indexOf(x) * 0.25}s"><span class="p ${x.place === 1 ? 'gold' : x.place === last ? 'alert' : ''}">${x.place}.</span>${sprite(spr, 3, x.place === 1 ? 'bob' : '')}
       <div class="grow" style="flex:1;min-width:0"><div class="up">${esc(pname(x.pid))}${x.draw ? ' <span class="gold small">· UNENTSCHIEDEN</span>' : ''}</div>
       <div class="tag">${esc(s?.deckName || '')}</div></div><span class="small muted">${info}</span></div>`;
   }).join('');
   const win = pl.find((x) => x.place === 1 && !x.draw);
   const title = g.ended.reason === 'time' || g.ended.reason === 'manual' ? (win ? 'VICTORY' : 'TIME OUT') : win ? 'VICTORY' : 'DRAW';
   const sub = win ? `> ${esc(pname(win.pid)).toUpperCase()} REITET ALLEIN DAVON` : '> 90:00 ERREICHT · SPIEL BEENDET → UNENTSCHIEDEN';
-  return `<div class="overlay" id="result" data-key="${key}"><div class="box stack">
-    <div style="position:relative;height:70px;overflow:hidden"><div class="ride" style="position:absolute;bottom:0">${sprite('rider', 4)}</div></div>
-    ${panel('SCAN COMPLETE', `<div class="h1">${title}</div><div class="tag">${sub}</div>`, { cls: win ? 'acc' : 'hi' })}
-    ${panel('PLATZIERUNG', rows)}
-    ${panel('BATTLEFIELD STATUS', leader('ZONE', `TISCH ${ref.table.no}`) + leader('HOSTILES', 'NONE') + leader('DAUER', clock(g.ended.at - start)))}
-    <div class="tag">> LOWER YOUR BLADE, LEAVE THE FALLEN, RIDE ON.</div>
-    <button class="btn pri block" data-act="lc-dismiss" data-k="${key}">→ CONTINUE RIDING INTO DARK<span class="cursor"></span></button>
+  const winTrophy = win ? `<div class="stage pop-in" style="--d:.15s;text-align:center">${sprite('trophy', 7, 'bob')}</div>` : '';
+  return `<div class="overlay result ${still}" id="result" data-key="${key}"><div class="box stack">
+    <div class="stage" style="--d:0s;position:relative;height:70px;overflow:hidden"><div class="ride" style="position:absolute;bottom:0">${sprite('rider', 4)}</div></div>
+    ${winTrophy}
+    <div class="stage" style="--d:.45s">${panel('SCAN COMPLETE', `<div class="h1">${title}</div><div class="tag">${sub}</div>`, { cls: win ? 'acc' : 'hi' })}</div>
+    <div class="stage" style="--d:.75s">${panel('PLATZIERUNG', rows)}</div>
+    <div class="stage" style="--d:${1.1 + pl.length * 0.25}s">${panel('BATTLEFIELD STATUS', leader('ZONE', `TISCH ${ref.table.no}`) + leader('HOSTILES', 'NONE') + leader('DAUER', clock(g.ended.at - start)))}</div>
+    <div class="stage tag" style="--d:${1.3 + pl.length * 0.25}s">> LOWER YOUR BLADE, LEAVE THE FALLEN, RIDE ON.</div>
+    <button class="stage btn pri block" style="--d:${1.5 + pl.length * 0.25}s" data-act="lc-dismiss" data-k="${key}">→ ZUR ÜBERSICHT<span class="cursor"></span></button>
   </div></div>`;
 }
 
@@ -302,7 +314,8 @@ export function afterLife() {
   const r = document.getElementById('result');
   if (r && !A.celebrated[r.dataset.key]) {
     A.celebrated[r.dataset.key] = 1;
-    confetti(r, 70);
+    // confetti lives outside the overlay so re-renders can't wipe it
+    setTimeout(() => confetti(document.body, 80, undefined, true), 700);
     buzz([80, 60, 80, 60, 200]);
   }
 }
@@ -412,5 +425,6 @@ export const lcActions = {
     mutate(el.dataset.g, (g) => endGame(g, 'manual'), { debounce: 0 });
   },
   'lc-result'() { const g = A.snap.G[gidNow()]; if (g?.ended) delete A.dismissed[g.id + ':' + g.ended.at]; A.ui.sheet = null; render(); },
-  'lc-dismiss'(el) { A.dismissed[el.dataset.k] = 1; render(); },
+  'lc-dismiss'(el) { A.dismissed[el.dataset.k] = 1; A.ui.sheet = null; go(backTo()); },
+  'show-result'(el) { delete A.dismissed[el.dataset.k]; go(el.dataset.to || 'life'); },
 };

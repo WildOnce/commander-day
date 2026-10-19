@@ -208,13 +208,18 @@ function homeView() {
     const g = s.G[ref.gid];
     const mySeat = g?.seats.find((x) => x.pid === A.me);
     const done = g?.ended || mySeat?.out;
+    if (g?.ended) {
+      out.push(gameOverPanel(g, ref));
+      out.push(freePanel()); out.push(feedPanel('WAS AN DEN ANDEREN TISCHEN LOS IST'));
+    } else {
     out.push(panel(`DEIN TISCH · RUNDE ${s.live.n}`, `
       <div class="between"><div class="h1" style="font-size:56px">TISCH ${ref.table.no}</div>${ref.table.auto ? '<span class="chip gold">BAR-TISCH</span>' : `<span class="chip">${g ? (g.ended ? 'BEENDET' : 'LÄUFT') : 'BEREIT'}</span>`}</div>
       <div class="tag" style="margin:2px 0 8px">DU SPIELST MIT: ${ref.table.players.filter((p) => p !== A.me).map((p) => esc(pname(p))).join(' · ')}</div>
       ${timerBlock(s.live)}
       <div style="margin-top:10px">${seatCards(s.live, ref.table)}</div>
-      <button class="btn pri block" style="margin-top:12px" data-act="nav" data-to="life">${g ? '♥ ZUM LIFE COUNTER' : '▶ LIFE COUNTER STARTEN'}</button>`, { cls: 'hi', right: '<span class="notch"></span>' }));
+      <button class="btn pri block" style="margin-top:12px" data-act="nav" data-to="life">${mySeat?.out ? '◉ LIVE ZUSCHAUEN' : g ? '♥ ZUM LIFE COUNTER' : '▶ LIFE COUNTER STARTEN'}</button>`, { cls: 'hi', right: '<span class="notch"></span>' }));
     if (done) { out.push(freePanel()); out.push(feedPanel('WÄHREND DU AN DER BAR BIST …')); }
+    }
   } else {
     out.push(panel(`RUNDE ${s.live.n}`, `<div class="row" style="gap:14px">${sprite('beer', 4, 'bob')}<div><div class="h2">DIESE RUNDE PAUSE</div><div class="small muted">Du sitzt nicht an einem Tisch. Bar, Dart, Smalltalk. 🎯</div></div></div>`));
     out.push(freePanel());
@@ -249,6 +254,31 @@ function eventInfoPanel() {
     ${me() ? `<button class="btn pri block" style="margin-top:12px" data-act="nav" data-to="decks">◎ DECKS EINTRAGEN</button>` : ''}`);
 }
 
+/** Shown on the overview once your table's game is over: your place + what happens next. */
+function gameOverPanel(g, ref) {
+  const s = A.snap;
+  const pl = g.ended.placements.find((x) => x.pid === A.me) || { place: '?', draw: false };
+  const win = g.ended.placements.find((x) => x.place === 1 && !x.draw);
+  const iWon = win?.pid === A.me;
+  const ti = timerInfo(s.live, s.config);
+  const autoSoon = s.config.autoTables && ti.phase === 'play' && ti.left >= s.config.autoMinLeft * 60000;
+  const key = g.id + ':' + g.ended.at;
+  const step = (n, t) => `<div class="row" style="gap:10px;align-items:flex-start;padding:5px 0"><span class="chip" style="flex:none;min-width:26px;justify-content:center">${n}</span><span class="small">${t}</span></div>`;
+  const next = [
+    step('🍺', 'Ab an die Bar, Dart werfen, quatschen – dein Spiel ist durch.'),
+    autoSoon ? step('⚄', `Sobald <b>${s.config.tableSize} Spieler frei</b> sind, startet automatisch ein <b>Bar-Tisch</b>. Du bekommst ein Popup mit Tischnummer & Mitspielern.`)
+      : step('⚄', 'Wenn alle Tische fertig sind, würfelt der Host die <b>nächste Runde</b>. Du bekommst ein Popup mit Tischnummer & Mitspielern.'),
+    autoSoon ? step('⏸', 'Keine Lust auf noch ein Spiel? Unten <b>„Ich mach Pause“</b> einschalten.') : '',
+    step('◉', 'Unter <b>LIVE</b> siehst du, was an den anderen Tischen passiert.'),
+  ].join('');
+  return panel(`TISCH ${ref.table.no} · SPIEL BEENDET`, `
+    <div class="row" style="gap:16px">${sprite(iWon ? 'trophy' : pl.draw ? 'shield' : 'ghost', 5, 'bob')}<div>
+      <div class="tag">DEIN ERGEBNIS</div><div class="h1" style="font-size:48px">PLATZ ${pl.place}${pl.draw ? ' ½' : ''}</div>
+      <div class="small">${iWon ? 'Du hast gewonnen! 🏆' : win ? `<b>${esc(pname(win.pid))}</b> hat gewonnen.` : 'Zeit abgelaufen – Unentschieden. 🤝'}</div></div></div>
+    <div class="tag" style="margin:12px 0 4px">WIE GEHT'S WEITER?</div>${next}
+    <button class="btn block" style="margin-top:10px" data-act="show-result" data-k="${key}" data-to="life">★ ERGEBNIS NOCHMAL ANSEHEN</button>`, { cls: iWon ? 'acc' : 'hi', right: '<span class="notch"></span>' });
+}
+
 function freePanel() {
   const s = A.snap;
   const free = freePlayers(s);
@@ -256,6 +286,7 @@ function freePanel() {
   const ti = timerInfo(s.live, s.config);
   const info = !s.config.autoTables ? 'AUTO-TISCHE SIND AUS.'
     : ti.phase === 'play' && ti.left < s.config.autoMinLeft * 60000 ? `ZU WENIG ZEIT FÜR EINEN NEUEN TISCH (< ${s.config.autoMinLeft} MIN).`
+    : free.length >= size && !proposeAutoTable(s) ? 'Ihr habt gerade schon zusammen gespielt – der nächste Bar-Tisch entsteht, sobald Spieler von anderen Tischen frei werden.'
     : `Sobald ${size} Spieler frei sind, entsteht automatisch ein neuer Tisch.`;
   return panel('BAR · FREIE SPIELER', `<div class="row" style="gap:14px">${sprite('beer', 4, 'bob')}<div class="grow"><div class="h2">${free.length}/${size} FREI</div><div class="small muted">${info}</div></div></div>
     <div class="row wrap" style="margin-top:8px">${free.map((f) => `<span class="chip ${f.pid === A.me ? 'sel' : ''}">${esc(pname(f.pid))}</span>`).join('') || '<span class="dim small">NIEMAND</span>'}</div>
