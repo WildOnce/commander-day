@@ -296,8 +296,9 @@ function resultHtml(g, ref) {
       <div class="tag">${esc(s?.deckName || '')}</div></div><span class="small muted">${info}</span></div>`;
   }).join('');
   const win = pl.find((x) => x.place === 1 && !x.draw);
-  const title = g.ended.reason === 'time' || g.ended.reason === 'manual' ? (win ? 'VICTORY' : 'TIME OUT') : win ? 'VICTORY' : 'DRAW';
-  const sub = win ? `> ${esc(pname(win.pid)).toUpperCase()} REITET ALLEIN DAVON` : '> 90:00 ERREICHT · SPIEL BEENDET → UNENTSCHIEDEN';
+  const title = win ? 'VICTORY' : g.ended.reason === 'time' ? 'TIME OUT' : 'DRAW';
+  const sub = win ? `> ${esc(pname(win.pid)).toUpperCase()} REITET ALLEIN DAVON`
+    : g.ended.reason === 'time' ? '> ZEIT ABGELAUFEN · SPIEL BEENDET → UNENTSCHIEDEN' : '> SPIEL BEENDET → UNENTSCHIEDEN';
   const winTrophy = win ? `<div class="stage pop-in" style="--d:.15s;text-align:center">${sprite('trophy', 7, 'bob')}</div>` : '';
   return `<div class="overlay result ${still}" id="result" data-key="${key}"><div class="box stack">
     <div class="stage" style="--d:0s;position:relative;height:70px;overflow:hidden"><div class="ride" style="position:absolute;bottom:0">${sprite('rider', 4)}</div></div>
@@ -413,7 +414,7 @@ export const lcActions = {
     const k = el.dataset.k; const g = A.snap.G[gidNow()];
     let out;
     if (k === 'coin') out = Math.random() < 0.5 ? 'KOPF' : 'ZAHL';
-    else if (k === 'first') out = pname(pick(alive(g)).pid).toUpperCase() + ' STARTET';
+    else if (k === 'first') { const al = alive(g); out = al.length ? esc(pname(pick(al).pid)).toUpperCase() + ' STARTET' : 'NIEMAND MEHR DA'; }
     else out = 1 + Math.floor(Math.random() * +k);
     A.ui.sheet = null; render();
     toast(`<div class="row" style="gap:12px">${sprite('dice', 4, 'pop')}<div><div class="tag">${k === 'coin' ? 'MÜNZE' : k === 'first' ? 'ZUFALL' : 'W' + k}</div><div class="h1">${out}</div></div></div>`, 3500);

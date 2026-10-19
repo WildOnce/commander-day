@@ -1,5 +1,5 @@
 import { A, MODE, store, DEVICE, setRender, render, refresh, go, toast, panel, leader, wubrg, topbar, pname, me, meKey, esc, ls } from './ctx.js';
-import { AWARD_INFO, DEFAULT_CONFIG, MAX_DECKS, makeTables, scoreTables, timerInfo, gameId, freePlayers, proposeAutoTable, computeStats } from './logic.js';
+import { AWARD_INFO, DEFAULT_CONFIG, MAX_DECKS, endGame, makeTables, scoreTables, timerInfo, gameId, freePlayers, proposeAutoTable, computeStats } from './logic.js';
 import { lifeView, afterLife, lifeTick, lcActions, initLifeInput, myTable, timerLabel } from './lc.js';
 import { wrappedView, afterWrapped, wrActions } from './wrapped.js';
 import { sprite } from './sprites.js';
@@ -88,7 +88,10 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function view() {
   if (!store.prefix || A.ui.login) return loginView();
   if (MODE === 'host') {
-    if (!A.snap.config || !store.get('config')) return hostCreateView();
+    if (!store.get('config')) {
+      if (!store.stableOnline(4000)) { setTimeout(render, 800); return panel('VERBINDE', `<div class="row" style="gap:14px">${sprite('star', 4, 'float')}<div class="h2">SCANNING<span class="cursor"></span></div></div><div class="small muted" style="margin-top:8px">Suche Event „${esc(store.code)}“ …</div>`); }
+      return hostCreateView();
+    }
     if (ls.get(hostKey()) !== A.snap.config.pinHash) return hostPinView();
     const r = A.route || 'round';
     if (r === 'wrapped') return { html: wrappedView() };
@@ -173,6 +176,7 @@ function seatCards(round, table, { swap = false, sel = null } = {}) {
   const g = round && s.G[gameId(round, table)];
   return `<div class="seatlist ${swap ? 'swap' : ''}">${table.players.map((pid, i) => {
     const p = s.P[pid];
+    if (!p && !g) return '';
     const seat = g?.seats.find((x) => x.pid === pid);
     const deck = seat?.deckName || p?.decks?.[0]?.name || 'KEIN DECK';
     const pl = g?.ended?.placements.find((x) => x.pid === pid);
@@ -274,7 +278,7 @@ function gameOverPanel(g, ref) {
   return panel(`TISCH ${ref.table.no} · SPIEL BEENDET`, `
     <div class="row" style="gap:16px">${sprite(iWon ? 'trophy' : pl.draw ? 'shield' : 'ghost', 5, 'bob')}<div>
       <div class="tag">DEIN ERGEBNIS</div><div class="h1" style="font-size:48px">PLATZ ${pl.place}${pl.draw ? ' ½' : ''}</div>
-      <div class="small">${iWon ? 'Du hast gewonnen! 🏆' : win ? `<b>${esc(pname(win.pid))}</b> hat gewonnen.` : 'Zeit abgelaufen – Unentschieden. 🤝'}</div></div></div>
+      <div class="small">${iWon ? 'Du hast gewonnen! 🏆' : win ? `<b>${esc(pname(win.pid))}</b> hat gewonnen.` : g.ended.reason === 'time' ? 'Zeit abgelaufen – Unentschieden. 🤝' : 'Spiel beendet – Unentschieden. 🤝'}</div></div></div>
     <div class="tag" style="margin:12px 0 4px">WIE GEHT'S WEITER?</div>${next}
     <button class="btn block" style="margin-top:10px" data-act="show-result" data-k="${key}" data-to="life">★ ERGEBNIS NOCHMAL ANSEHEN</button>`, { cls: iWon ? 'acc' : 'hi', right: '<span class="notch"></span>' });
 }
@@ -362,7 +366,7 @@ function statsView() {
     leader('SPIELE', m.games) + leader('SIEGE', m.wins, 'gold') + leader('UNENTSCHIEDEN', m.draws) + leader('Ø PLATZ', m.avgPlace ? m.avgPlace.toFixed(1) : '—') +
     leader('AUSGESCHIEDEN', `${m.outs}×`) + leader('SCHNELLSTES AUS', m.fastestOut ? dur(m.fastestOut) : '—') + leader('SCHNELLSTER SIEG', m.fastestWin ? dur(m.fastestWin) : '—') +
     leader('ZEIT IM SPIEL', dur(m.inGame)) + leader('ZEIT AN DER BAR', dur(m.bar)) + leader('K.O.S VERURSACHT', m.kills) +
-    leader('NEMESIS', m.nemesis ? `${pname(m.nemesis.pid)} (${m.nemesis.n}×)` : '—', 'alert') + leader('LIEBLINGSOPFER', m.victim ? `${pname(m.victim.pid)} (${m.victim.n}×)` : '—') +
+    leader('NEMESIS', m.nemesis ? `${esc(pname(m.nemesis.pid))} (${m.nemesis.n}×)` : '—', 'alert') + leader('LIEBLINGSOPFER', m.victim ? `${esc(pname(m.victim.pid))} (${m.victim.n}×)` : '—') +
     leader('CMD-SCHADEN AUSGETEILT', m.cmdDealt) + leader('LEBEN VERLOREN', m.lifeLost) + leader('HÖCHSTES LEBEN', m.maxLife), { cls: 'hi' }));
   if (S.awards.length) out.push(panel('AWARDS (LIVE)', S.awards.map((a) => `<div class="row" style="gap:12px;padding:6px 0;border-bottom:1px dotted var(--line)">
     <span style="width:44px;text-align:center">${sprite(a.sprite, a.sprite === 'rider' ? 2 : 3)}</span><div style="flex:1;min-width:0"><div class="tag">${esc(a.title)}</div><div class="up">${esc(a.name)}</div><div class="small muted" style="margin-top:2px">${esc(a.desc || '')}</div></div><span class="small muted" style="text-align:right">${esc(a.value || '')}</span></div>`).join('')));
@@ -383,6 +387,10 @@ function hostRound() {
   out.push(panel('MATCHING', `
     <div class="toggle ${s.config.smart ? 'on' : ''}" data-act="h-toggle" data-f="smart"><span><span class="small">INTELLIGENTES MATCHING</span><br><span class="tag">neue Konstellationen bevorzugen</span></span><span class="sw"></span></div>
     <div class="toggle ${s.config.autoTables ? 'on' : ''}" data-act="h-toggle" data-f="autoTables"><span><span class="small">AUTO-TISCHE</span><br><span class="tag">${s.config.tableSize} Ausgeschiedene → neuer Tisch</span></span><span class="sw"></span></div>`));
+  if (s.draft && s.live) {
+    const { ti: lti } = timerLabel(s.live, s.config);
+    out.push(panel(`RUNDE ${s.live.n} LÄUFT NOCH`, `${timerBlock(s.live)}${lti.phase !== 'idle' && lti.phase !== 'ended' ? `<div class="grid2" style="margin-top:10px">${s.live.timer?.pausedAt ? `<button class="btn sm" data-act="h-timer" data-k="resume">▶ WEITER</button>` : `<button class="btn sm" data-act="h-timer" data-k="pause">‖ PAUSE</button>`}<button class="btn sm warn" data-act="h-timer" data-k="stop">■ BEENDEN</button></div>` : ''}`));
+  }
   if (s.draft) {
     const sc = scoreTables(s.draft.tables, s.rounds, s.draft.id);
     out.push(panel('PAIRING-SCAN', leader('NEUE PAARUNGEN', `${sc.pairsTotal - sc.repeats} / ${sc.pairsTotal}`) + leader('WIEDERHOLUNGEN', sc.repeats, sc.repeats ? 'gold' : '') + leader('MODUS', s.config.smart ? 'SMART · MIN. WIEDERHOLUNGEN' : 'PURER ZUFALL')));
@@ -396,7 +404,7 @@ function hostRound() {
     out.push(panel('RUNDENTIMER', `${timerBlock(s.live)}<div class="grid2" style="margin-top:10px">
       ${ti.phase === 'idle' ? `<button class="btn pri" data-act="h-timer" data-k="start" style="grid-column:span 2">▶ TIMER STARTEN</button>` : ''}
       ${ti.phase === 'play' || ti.phase === 'ot' ? (t.pausedAt ? `<button class="btn pri" data-act="h-timer" data-k="resume">▶ WEITER</button>` : `<button class="btn" data-act="h-timer" data-k="pause">‖ PAUSE</button>`) : ''}
-      ${ti.phase !== 'idle' && ti.phase !== 'ended' ? `<button class="btn" data-act="h-timer" data-k="add">+5 MIN</button><button class="btn" data-act="h-timer" data-k="sub">−5 MIN</button><button class="btn warn" data-act="h-timer" data-k="stop">■ BEENDEN</button>` : ''}
+      ${ti.phase !== 'idle' && ti.phase !== 'ended' ? `<button class="btn" data-act="h-timer" data-k="add">+5 MIN</button>${ti.phase === 'play' && ti.left > 6 * 60000 ? '<button class="btn" data-act="h-timer" data-k="sub">−5 MIN</button>' : '<button class="btn" disabled>−5 MIN</button>'}<button class="btn warn" data-act="h-timer" data-k="stop">■ BEENDEN</button>` : ''}
       ${ti.phase === 'ended' ? `<button class="btn" data-act="h-timer" data-k="reset" style="grid-column:span 2">↺ TIMER ZURÜCKSETZEN</button>` : ''}
       </div>`, { cls: 'hi', right: '<span class="notch"></span>' }));
     for (const tb of s.live.tables) {
@@ -621,7 +629,7 @@ function tick() {
 
 function autoTick() {
   const s = A.snap;
-  if (!s?.live || !s.config.autoTables) return;
+  if (!s?.live || !s.config.autoTables || !store.stableOnline(3000)) return;
   const prop = proposeAutoTable(s);
   if (!prop || s.live.tables.some((t) => t.id === prop.id)) return;
   if (MODE !== 'host' && !prop.players.includes(A.me)) return;
@@ -637,15 +645,15 @@ function autoTick() {
 }
 
 function addTable(round, t) {
-  const no = Math.max(0, ...round.tables.map((x) => x.no)) + 1;
-  store.put('round/' + round.id, { ...round, tables: [...round.tables, { id: t.id, no, players: t.players, auto: true, createdAt: Date.now() }] });
+  store.put(`xtable/${round.id}/${t.id}`, { id: t.id, roundId: round.id, players: t.players, auto: true, createdAt: Date.now() });
 }
 
 /* ═════════════════════ actions ═════════════════════ */
 
 const putPlayer = (p) => store.put('player/' + p.id, p);
 const putCfg = (patch) => store.put('config', { ...A.snap.config, ...patch });
-const putRound = (r) => store.put('round/' + r.id, r);
+// merged auto tables (_x) are stored separately – never write them into the round record
+const putRound = (r) => store.put('round/' + r.id, { ...r, tables: r.tables.filter((t) => !t._x) });
 
 const actions = {
   ...lcActions, ...wrActions,
@@ -673,7 +681,7 @@ const actions = {
     A.me = p.id; ls.set(meKey(), p.id); go(MODE === 'host' ? 'me' : 'home');
     toast(`WILLKOMMEN ZURÜCK, ${esc(p.name).toUpperCase()}`);
   },
-  async 'set-pin'() {
+  async 'set-pin'() { if (!me()) return render();
     const m = me(); const pin = prompt('Neue PIN (4–6 Ziffern)');
     if (pin == null) return;
     if (!/^\d{4,6}$/.test(pin.trim())) return toast('PIN: 4–6 ZIFFERN');
@@ -684,14 +692,19 @@ const actions = {
     ls.del(meKey()); A.me = null; A.draft = null; go(MODE === 'host' ? 'me' : 'home');
   },
   'h-resetpin'(el) { const p = A.snap.P[el.dataset.id]; if (confirm(`PIN von ${p.name} zurücksetzen? Beim nächsten Login legt ${p.name} eine neue fest.`)) putPlayer({ ...p, pinHash: null }); },
-  pause() { const m = me(); const id = A.snap.live?.id; putPlayer({ ...m, pauseRound: m.pauseRound === id ? null : id }); },
+  pause() { if (!me()) return render(); const m = me(); const id = A.snap.live?.id; putPlayer({ ...m, pauseRound: m.pauseRound === id ? null : id }); },
   'assign-ok'(el) { A.ui.assign = null; if (el.dataset.to) go(el.dataset.to); else render(); },
-  copy(el) { navigator.clipboard?.writeText(el.dataset.v).then(() => toast('⧉ KOPIERT')); },
-  rename() {
+  copy(el) {
+    const v = el.dataset.v;
+    const fallback = () => prompt('Zum Kopieren gedrückt halten:', v);
+    if (!navigator.clipboard) return fallback();
+    navigator.clipboard.writeText(v).then(() => toast('⧉ KOPIERT'), fallback);
+  },
+  rename() { if (!me()) return render();
     const m = me(); const n = prompt('Neuer Name', m.name);
     if (n?.trim()) putPlayer({ ...m, name: n.trim().slice(0, 16) });
   },
-  mana(el) { const c = el.dataset.c; const d = A.draft; d.colors = d.colors.includes(c) ? d.colors.replace(c, '') : 'WUBRG'.split('').filter((x) => d.colors.includes(x) || x === c).join(''); render(); },
+  mana(el) { if (!me()) return render(); const c = el.dataset.c; const d = A.draft; d.colors = d.colors.includes(c) ? d.colors.replace(c, '') : 'WUBRG'.split('').filter((x) => d.colors.includes(x) || x === c).join(''); render(); },
   'draft-partner'() { A.draft.partner = !A.draft.partner; render(); },
   async 'ac-pick'(el) {
     const name = el.dataset.name;
@@ -701,7 +714,7 @@ const actions = {
     if (info) Object.assign(A.draft, { name: info.name, colors: info.colors, art: info.art, partner: info.partner || A.draft.partner });
     render();
   },
-  async 'deck-save'() {
+  async 'deck-save'() { if (!me()) return render();
     const m = me(); const d = A.draft;
     const name = (document.getElementById('deckname')?.value || d.name).trim();
     if (!name) return toast('NAME FEHLT');
@@ -715,10 +728,10 @@ const actions = {
     putPlayer({ ...m, decks });
     toast(`${sprite('sword', 2)} ${esc(rec.name)} GESPEICHERT`);
   },
-  'deck-edit'(el) { const x = me().decks.find((y) => y.id === el.dataset.id); A.draft = { ...emptyDraft(), ...x, editId: x.id }; render(); document.getElementById('deckname')?.scrollIntoView({ block: 'center' }); },
+  'deck-edit'(el) { if (!me()) return render(); const x = me().decks.find((y) => y.id === el.dataset.id); A.draft = { ...emptyDraft(), ...x, editId: x.id }; render(); document.getElementById('deckname')?.scrollIntoView({ block: 'center' }); },
   'deck-cancel'() { A.draft = emptyDraft(); render(); },
-  'deck-del'(el) { const m = me(); const x = m.decks.find((y) => y.id === el.dataset.id); if (confirm(`${x.name} löschen?`)) putPlayer({ ...m, decks: m.decks.filter((y) => y.id !== x.id) }); },
-  'deck-top'(el) { const m = me(); const x = m.decks.find((y) => y.id === el.dataset.id); putPlayer({ ...m, decks: [x, ...m.decks.filter((y) => y.id !== x.id)] }); },
+  'deck-del'(el) { if (!me()) return render(); const m = me(); const x = m.decks.find((y) => y.id === el.dataset.id); if (confirm(`${x.name} löschen?`)) putPlayer({ ...m, decks: m.decks.filter((y) => y.id !== x.id) }); },
+  'deck-top'(el) { if (!me()) return render(); const m = me(); const x = m.decks.find((y) => y.id === el.dataset.id); putPlayer({ ...m, decks: [x, ...m.decks.filter((y) => y.id !== x.id)] }); },
 
   // host
   'h-toggle'(el) { putCfg({ [el.dataset.f]: !A.snap.config[el.dataset.f] }); },
@@ -748,7 +761,12 @@ const actions = {
     if (s.live) {
       const ti = timerInfo(s.live, s.config);
       if (ti.phase !== 'ended' && ti.phase !== 'idle' && !confirm(`Runde ${s.live.n} läuft noch. Trotzdem beenden und neue Runde starten?`)) return;
-      putRound({ ...s.live, status: 'done', timer: { ...s.live.timer, endedAt: s.live.timer?.endedAt || (s.live.timer?.startedAt ? Date.now() : null) } });
+      for (const t of s.live.tables) {
+        const gid = gameId(s.live, t);
+        const g = store.get('game/' + gid);
+        if (g && !g.ended) { const x = structuredClone(g); endGame(x, 'time'); store.put('game/' + gid, x); }
+      }
+      putRound({ ...s.live, status: 'done', timer: { ...s.live.timer, endedAt: s.live.timer?.endedAt || Date.now() } });
     }
     putRound({ ...s.draft, status: 'live', publishedAt: Date.now() });
     toast(`${sprite('sword', 2)} RUNDE ${s.draft.n} VERÖFFENTLICHT`);
@@ -773,7 +791,19 @@ const actions = {
   },
   'h-present'(el) { const p = A.snap.P[el.dataset.id]; putPlayer({ ...p, present: p.present === false }); },
   'h-rename'(el) { const p = A.snap.P[el.dataset.id]; const n = prompt('Name', p.name); if (n?.trim()) putPlayer({ ...p, name: n.trim().slice(0, 16) }); },
-  'h-delp'(el) { const p = A.snap.P[el.dataset.id]; if (confirm(`${p.name} entfernen?`)) store.del('player/' + p.id); },
+  'h-delp'(el) {
+    const p = A.snap.P[el.dataset.id];
+    if (!confirm(`${p.name} entfernen?`)) return;
+    store.del('player/' + p.id);
+    // also free their seat at tables that haven't started a life counter yet
+    for (const r of [A.snap.draft, A.snap.live].filter(Boolean)) {
+      for (const t of r.tables.filter((t) => t._x && t.players.includes(p.id) && !A.snap.G[gameId(r, t)])) {
+        store.put(`xtable/${r.id}/${t.id}`, { id: t.id, roundId: r.id, players: t.players.filter((x) => x !== p.id), auto: true, createdAt: t.createdAt });
+      }
+      if (!r.tables.some((t) => !t._x && t.players.includes(p.id) && !A.snap.G[gameId(r, t)])) continue;
+      putRound({ ...r, tables: r.tables.map((t) => (A.snap.G[gameId(r, t)] ? t : { ...t, players: t.players.filter((x) => x !== p.id) })).filter((t) => t.players.length) });
+    }
+  },
   'h-wrapped'(el) { putCfg({ wrappedAt: el.dataset.on === '1' ? Date.now() : null }); if (el.dataset.on === '1') toast(`${sprite('trophy', 2)} WRAPPED GEPUSHT`); },
   async 'h-pin'() {
     const p = prompt('Neue Host-PIN (min. 4 Zeichen)');
@@ -787,12 +817,12 @@ const actions = {
   },
   async 'h-import'(el) {
     const f = el.files?.[0]; if (!f) return;
-    try { const j = JSON.parse(await f.text()); if (!confirm('Backup einspielen? Neuere Daten bleiben erhalten.')) return; store.restore(j.data || j); toast('BACKUP EINGESPIELT'); } catch { toast('UNGÜLTIGE DATEI'); }
+    try { const j = JSON.parse(await f.text()); if (!confirm('Backup einspielen? Neuere Daten bleiben erhalten.')) return; const n = store.restore(j.data || j); toast(`BACKUP EINGESPIELT · ${n} EINTRÄGE ÜBERNOMMEN`); } catch { toast('UNGÜLTIGE DATEI'); }
   },
   'h-reset'(el) {
     const all = el.dataset.k === 'all';
     if (prompt(`Tippe RESET um ${all ? 'ALLES' : 'alle Runden & Spiele'} zu löschen`) !== 'RESET') return;
-    for (const [k, r] of store.e) if (!r.d && (k.startsWith('round/') || k.startsWith('game/') || (all && k.startsWith('player/')))) store.del(k);
+    for (const [k, r] of store.e) if (!r.d && (k.startsWith('round/') || k.startsWith('game/') || k.startsWith('xtable/') || (all && k.startsWith('player/')))) store.del(k);
     if (all) putCfg({ wrappedAt: null });
     toast('GELÖSCHT');
   },

@@ -15,7 +15,15 @@ export const START_LIFE = 40;
 export function snapshot(store) {
   const config = { ...DEFAULT_CONFIG, ...(store.get('config') || {}) };
   const players = store.list('player/').sort((a, b) => a.name.localeCompare(b.name));
-  const rounds = store.list('round/').sort((a, b) => a.n - b.n);
+  // auto tables live in their own entities (xtable/<round>/<id>) so player devices never rewrite the round
+  const xt = store.list('xtable/');
+  const rounds = store.list('round/').sort((a, b) => a.n - b.n).map((r) => {
+    const extra = xt.filter((t) => t.roundId === r.id && t.players?.length && !r.tables.some((b) => b.id === t.id))
+      .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+    if (!extra.length) return r;
+    const base = Math.max(0, ...r.tables.map((t) => t.no));
+    return { ...r, tables: [...r.tables, ...extra.map((t, i) => ({ ...t, no: base + i + 1, _x: true }))] };
+  });
   const games = store.list('game/');
   const live = [...rounds].reverse().find((r) => r.status === 'live') || null;
   const draft = rounds.find((r) => r.status === 'draft') || null;
@@ -257,9 +265,10 @@ export function proposeAutoTable(snap) {
     if (acc.length === size) { combos.push([...acc]); return; }
     for (let i = start; i < pool.length; i++) { acc.push(pool[i]); rec(i + 1, acc); acc.pop(); }
   };
-  if (config.smart) rec(0, []); else combos.push(pool.slice(0, size));
+  rec(0, []); // combos come out in "longest waiting first" order
   for (const c of combos) {
     if (new Set(c.map((x) => x.table)).size === 1) continue; // never re-form the same pod
+    if (!config.smart) { const pids = c.map((x) => x.pid).sort(); best = { pids, cost: 0, wait: 0 }; break; }
     const pids = c.map((x) => x.pid).sort();
     const { cost } = costOf([pids], counts);
     const wait = c.reduce((a, x) => a + x.at, 0);

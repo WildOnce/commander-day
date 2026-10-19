@@ -32,6 +32,7 @@ export class Store extends EventTarget {
         clientId: `cz_${uid(10)}`, keepalive: 30, reconnectPeriod: 2500, connectTimeout: 8000, clean: true,
       });
       c.on('connect', () => {
+        if (!this.online) this.onlineSince = Date.now();
         this.status[i] = 'online';
         this.seen[i].clear();
         c.subscribe(`${this.prefix}#`, { qos: 1 });
@@ -52,6 +53,8 @@ export class Store extends EventTarget {
   }
 
   get online() { return this.status.some((s) => s === 'online'); }
+  /** online for at least `ms` – long enough for retained messages to have arrived */
+  stableOnline(ms = 3000) { return this.online && Date.now() - (this.onlineSince || Date.now()) >= ms; }
 
   onMsg(i, topic, buf) {
     if (!buf?.length) return;
@@ -62,7 +65,8 @@ export class Store extends EventTarget {
     this.seen[i].set(key, Math.max(rec.t, this.seen[i].get(key) ?? -1));
     const cur = this.e.get(key);
     if (!cur || rec.t > cur.t || (rec.t === cur.t && String(rec.by) > String(cur.by))) {
-      if (this.timers.has(key)) return; // we have a pending local write that will win
+      // a newer remote write beats our still-pending local one (e.g. someone took over the table)
+      if (this.timers.has(key)) { clearTimeout(this.timers.get(key)); this.timers.delete(key); }
       this.e.set(key, rec);
       this.dirty(key);
     }
@@ -96,13 +100,14 @@ export class Store extends EventTarget {
     const rec = { v: deleted ? null : v, t: Math.max(Date.now(), (cur?.t || 0) + 1), by: DEVICE, d: deleted ? 1 : 0 };
     this.e.set(key, rec);
     this.dirty(key);
-    clearTimeout(this.timers.get(key));
     const send = () => {
+      clearTimeout(this.timers.get(key));
       this.timers.delete(key);
       const r = this.e.get(key);
       this.clients.forEach((c) => c?.publish(this.prefix + key, JSON.stringify(r), { qos: 1, retain: true }));
     };
-    if (debounce) this.timers.set(key, setTimeout(send, debounce));
+    // throttle (not debounce): during rapid tapping the latest state still goes out at least every `debounce` ms
+    if (debounce) { if (!this.timers.has(key)) this.timers.set(key, setTimeout(send, debounce)); }
     else send();
   }
 
@@ -129,9 +134,14 @@ export class Store extends EventTarget {
 
   dump() { return Object.fromEntries(this.e); }
 
+  /** Merge a backup: only records newer than what we have win, with their original timestamps. */
   restore(obj) {
+    let n = 0;
     for (const [k, rec] of Object.entries(obj)) {
-      if (rec && typeof rec.t === 'number') this.put(k, rec.v, { deleted: !!rec.d });
+      if (!rec || typeof rec.t !== 'number' || (this.e.get(k)?.t ?? -1) >= rec.t) continue;
+      this.e.set(k, rec); this.dirty(k); n++;
+      this.clients.forEach((c) => c?.publish(this.prefix + k, JSON.stringify(rec), { qos: 1, retain: true }));
     }
+    return n;
   }
 }

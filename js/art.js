@@ -3,7 +3,7 @@ const API = 'https://api.scryfall.com';
 
 const found = new Map();
 const toInfo = (c) => ({
-  name: c.name, colors: (c.color_identity || []).join(''),
+  name: c.name, colors: 'WUBRG'.split('').filter((x) => (c.color_identity || []).includes(x)).join(''),
   art: c.image_uris?.art_crop || c.card_faces?.[0]?.image_uris?.art_crop || null,
   partner: (c.keywords || []).some((k) => /partner|friends forever|background/i.test(k)),
 });
@@ -28,7 +28,7 @@ export async function cardInfo(name) {
     const c = await r.json();
     const art = c.image_uris?.art_crop || c.card_faces?.[0]?.image_uris?.art_crop || null;
     const partner = (c.keywords || []).some((k) => /partner|friends forever|background/i.test(k));
-    return { name: c.name, colors: (c.color_identity || []).join(''), art, partner };
+    return { name: c.name, colors: 'WUBRG'.split('').filter((x) => (c.color_identity || []).includes(x)).join(''), art, partner };
   } catch { return null; }
 }
 

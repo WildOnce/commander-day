@@ -96,14 +96,15 @@ export function afterWrapped() {
   if (sl.dataset.fx === 'confetti' && A.ui.wrFx !== key) confetti(sl, 60);
   A.ui.wrFx = key;
   document.querySelectorAll('canvas[data-art]').forEach((c) => drawArt(c, c.dataset.art));
-  // progress + auto advance
+  // progress + auto advance – only restart when the slide actually changed (MQTT re-renders keep the clock)
+  if (A.ui.wrTkey === key && A.ui.wrT) return;
+  A.ui.wrTkey = key;
   clearInterval(A.ui.wrT);
   const t0 = Date.now();
-  const cur = document.querySelector('.wr .prog i.cur');
   A.ui.wrT = setInterval(() => {
     const p = (Date.now() - t0) / SLIDE_MS;
-    cur?.style.setProperty('--p', Math.min(100, p * 100) + '%');
-    if (p >= 1) { clearInterval(A.ui.wrT); wrActions['wr-next'](); }
+    document.querySelector('.wr .prog i.cur')?.style.setProperty('--p', Math.min(100, p * 100) + '%');
+    if (p >= 1) { clearInterval(A.ui.wrT); A.ui.wrT = null; wrActions['wr-next'](); }
   }, 100);
 }
 
@@ -114,6 +115,6 @@ export const wrActions = {
     else clearInterval(A.ui.wrT);
   },
   'wr-prev'() { A.ui.wr = Math.max(0, (A.ui.wr ?? 0) - 1); render(); },
-  'wr-open'() { A.ui.wr = 0; A.ui.wrSlides = null; go('wrapped'); },
-  'wr-close'() { clearInterval(A.ui.wrT); A.ui.wrSlides = null; go(MODE === 'host' ? 'setup' : 'home'); },
+  'wr-open'() { A.ui.wr = 0; A.ui.wrSlides = null; A.ui.wrTkey = null; go('wrapped'); },
+  'wr-close'() { clearInterval(A.ui.wrT); A.ui.wrT = null; A.ui.wrTkey = null; A.ui.wrSlides = null; go(MODE === 'host' ? 'setup' : 'home'); },
 };
