@@ -1,5 +1,5 @@
 import { A, MODE, store, DEVICE, setRender, render, refresh, go, toast, panel, leader, wubrg, topbar, pname, me, meKey, esc, ls } from './ctx.js';
-import { DEFAULT_CONFIG, MAX_DECKS, makeTables, scoreTables, timerInfo, gameId, freePlayers, proposeAutoTable, computeStats } from './logic.js';
+import { AWARD_INFO, DEFAULT_CONFIG, MAX_DECKS, makeTables, scoreTables, timerInfo, gameId, freePlayers, proposeAutoTable, computeStats } from './logic.js';
 import { lifeView, afterLife, lifeTick, lcActions, initLifeInput, myTable, timerLabel } from './lc.js';
 import { wrappedView, afterWrapped, wrActions } from './wrapped.js';
 import { sprite } from './sprites.js';
@@ -305,7 +305,10 @@ function statsView() {
     leader('NEMESIS', m.nemesis ? `${pname(m.nemesis.pid)} (${m.nemesis.n}×)` : '—', 'alert') + leader('LIEBLINGSOPFER', m.victim ? `${pname(m.victim.pid)} (${m.victim.n}×)` : '—') +
     leader('CMD-SCHADEN AUSGETEILT', m.cmdDealt) + leader('LEBEN VERLOREN', m.lifeLost) + leader('HÖCHSTES LEBEN', m.maxLife), { cls: 'hi' }));
   if (S.awards.length) out.push(panel('AWARDS (LIVE)', S.awards.map((a) => `<div class="row" style="gap:12px;padding:6px 0;border-bottom:1px dotted var(--line)">
-    <span style="width:44px;text-align:center">${sprite(a.sprite, 3)}</span><div style="flex:1;min-width:0"><div class="tag">${esc(a.title)}</div><div class="up">${esc(a.name)}</div></div><span class="small muted" style="text-align:right">${esc(a.value || '')}</span></div>`).join('')));
+    <span style="width:44px;text-align:center">${sprite(a.sprite, a.sprite === 'rider' ? 2 : 3)}</span><div style="flex:1;min-width:0"><div class="tag">${esc(a.title)}</div><div class="up">${esc(a.name)}</div><div class="small muted" style="margin-top:2px">${esc(a.desc || '')}</div></div><span class="small muted" style="text-align:right">${esc(a.value || '')}</span></div>`).join('')));
+  out.push(`<details class="panel"><summary class="tag" style="cursor:pointer;list-style:none">ⓘ SO FUNKTIONIEREN DIE AWARDS ▾</summary>${AWARD_INFO.map((a) => `<div class="row" style="gap:12px;padding:8px 0;border-bottom:1px solid var(--line);align-items:flex-start">
+    <span style="width:44px;text-align:center;flex:none">${sprite(a.sprite, a.sprite === 'rider' ? 2 : 3)}</span><div><div class="up"><b>${esc(a.title)}</b></div><div class="small muted">${esc(a.desc)}</div></div></div>`).join('')}
+    <div class="small muted" style="margin-top:8px">Punkte: Sieg = 3 · Unentschieden (Zeit abgelaufen) = 1 · ausgeschieden = 0. Zeiten zählen ab Start des Rundentimers.</div></details>`);
   if (S.commanders.length) out.push(panel('COMMANDER WINRATE', S.commanders.slice(0, 12).map((c) => leader(c.name, `${c.wins}/${c.games} · ${Math.round(c.rate * 100)}%`)).join('')));
   return `<div class="stack">${out.join('')}</div>`;
 }
@@ -467,7 +470,7 @@ function liveView() {
   const lb = S.leaderboard.filter((p) => p.games).slice(0, 12);
   if (lb.length) out.push(panel('LEADERBOARD', lb.map((p, i) => leader(`${String(i + 1).padStart(2, '0')}  ${p.name}`, `${p.wins}W · ${p.draws}D · ${p.points} PTS`, i === 0 ? 'gold' : '')).join('')));
   if (S.awards.length) out.push(panel('AWARDS (LIVE)', S.awards.map((a) => `<div class="row" style="gap:12px;padding:6px 0;border-bottom:1px solid var(--line)">
-    <span style="width:44px;text-align:center">${sprite(a.sprite, 3)}</span><div style="flex:1;min-width:0"><div class="tag">${esc(a.title)}</div><div class="up"><b>${esc(a.name)}</b></div></div><span class="small muted" style="text-align:right">${esc(a.value || '')}</span></div>`).join('')));
+    <span style="width:44px;text-align:center">${sprite(a.sprite, a.sprite === 'rider' ? 2 : 3)}</span><div style="flex:1;min-width:0"><div class="tag">${esc(a.title)}</div><div class="up"><b>${esc(a.name)}</b></div><div class="small muted" style="margin-top:2px">${esc(a.desc || '')}</div></div><span class="small muted" style="text-align:right">${esc(a.value || '')}</span></div>`).join('')));
   const past = s.rounds.filter((r) => r.status === 'done').reverse();
   for (const r of past) {
     const res = r.tables.map((t) => {

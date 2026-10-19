@@ -357,36 +357,54 @@ function topKey(o) {
 const minBy = (arr, f) => arr.filter((x) => f(x) != null).sort((a, b) => f(a) - f(b))[0];
 const maxBy = (arr, f) => arr.filter((x) => f(x) != null && f(x) > 0).sort((a, b) => f(b) - f(a))[0];
 
+/** Every award with its icon and a plain-language explanation of how it is decided. */
+export const AWARD_INFO = [
+  { key: 'best', sprite: 'trophy', title: 'BESTER SPIELER', desc: 'Meiste Punkte des Tages: Sieg = 3, Unentschieden = 1. Bei Gleichstand zählen die Siege.' },
+  { key: 'cmdr', sprite: 'sword', title: 'STÄRKSTER COMMANDER', desc: 'Der Commander mit den meisten Siegen – bei Gleichstand die bessere Siegquote.' },
+  { key: 'fastwin', sprite: 'rider', title: 'SCHNELLSTER SIEG', desc: 'Kürzeste Zeit vom Rundenstart bis zum Sieg (alle anderen am Tisch raus).' },
+  { key: 'fastout', sprite: 'skull', title: 'SPEEDRUN ZUM TRESEN', desc: 'Wer am schnellsten nach Rundenstart ausgeschieden ist. Mehr Zeit für Bier & Dart.' },
+  { key: 'roach', sprite: 'knight', title: 'DAUERBRENNER', desc: 'Am längsten im Spiel geblieben – Summe der Spielzeit über alle Runden, bis man raus war oder die Runde endete.' },
+  { key: 'bar', sprite: 'beer', title: 'STAMMGAST', desc: 'Am meisten Zeit an der Bar – Summe der Zeit zwischen eigenem K.O. und Rundenende.' },
+  { key: 'kills', sprite: 'crosshair', title: 'KOPFGELDJÄGER', desc: 'Hat die meisten Mitspieler rausgehauen (zählt bei „Wer war’s?“ bzw. tödlichem Commander-Schaden).' },
+  { key: 'cmd', sprite: 'axe', title: 'COMMANDER-SCHLÄCHTER', desc: 'Hat mit dem eigenen Commander den meisten Commander-Schaden verteilt.' },
+  { key: 'poison', sprite: 'potion', title: 'GIFTSCHLUCKER', desc: 'Hat insgesamt die meisten Giftmarker abbekommen.' },
+  { key: 'life', sprite: 'heart', title: 'LEBENSKÜNSTLER', desc: 'Höchster Lebensstand des Tages (über 40).' },
+  { key: 'comeback', sprite: 'zombie', title: 'COMEBACK-KID', desc: 'Hat ein Spiel gewonnen, obwohl er/sie zwischendurch bei 10 Leben oder weniger war.' },
+  { key: 'punch', sprite: 'shield', title: 'PUNCHINGBALL', desc: 'Hat insgesamt die meisten Lebenspunkte verloren – und trotzdem weitergemacht.' },
+  { key: 'nemesis', sprite: 'ghost', title: 'FEHDE DES TAGES', desc: 'Das Duo, bei dem eine Person die andere am häufigsten rausgehauen hat.' },
+];
+const DESC = Object.fromEntries(AWARD_INFO.map((a) => [a.key, a.desc]));
+
 function awards(list, commanders, P) {
   const A = [];
-  const add = (key, sprite, title, quip, p, value) => p && A.push({ key, sprite, title, quip, pid: p.pid, name: p.name, value });
+  const add = (key, sprite, title, quip, p, value) => p && A.push({ key, sprite, title, quip, desc: DESC[key], pid: p.pid, name: p.name, value });
   const played = list.filter((p) => p.games);
   const best = [...played].sort((a, b) => b.points - a.points || b.wins - a.wins)[0];
   if (best?.points) add('best', 'trophy', 'BESTER SPIELER', 'Hat den Tag dominiert.', best, `${best.points} PUNKTE · ${best.wins} SIEGE`);
   const c = commanders[0];
-  if (c?.wins) A.push({ key: 'cmdr', sprite: 'sword', title: 'STÄRKSTER COMMANDER', quip: 'Bitte auf die Bannliste setzen.', name: c.name, pid: c.owners[0], value: `${c.wins}/${c.games} SIEGE` });
+  if (c?.wins) A.push({ key: 'cmdr', sprite: 'sword', title: 'STÄRKSTER COMMANDER', quip: 'Bitte auf die Bannliste setzen.', desc: DESC.cmdr, name: c.name, pid: c.owners[0], value: `${c.wins}/${c.games} SIEGE` });
   const fw = minBy(played, (p) => p.fastestWin);
   add('fastwin', 'rider', 'SCHNELLSTER SIEG', 'Kam, sah, kombote.', fw, fw && clockish(fw.fastestWin));
   const fo = minBy(played, (p) => p.fastestOut);
   add('fastout', 'skull', 'SPEEDRUN ZUM TRESEN', 'Das Bier war noch nicht mal kalt.', fo, fo && clockish(fo.fastestOut));
   const roach = maxBy(played, (p) => p.inGame);
-  add('roach', 'roach', 'KAKERLAKE', 'Längste Zeit im Spiel. Unkaputtbar.', roach, roach && hours(roach.inGame));
+  add('roach', 'knight', 'DAUERBRENNER', 'Einfach nicht totzukriegen.', roach, roach && hours(roach.inGame));
   const bar = maxBy(played, (p) => p.bar);
-  add('bar', 'beer', 'STAMMGAST', 'Längste Zeit an der Bar.', bar, bar && hours(bar.bar));
+  add('bar', 'beer', 'STAMMGAST', 'Der Tresen kennt deinen Namen.', bar, bar && hours(bar.bar));
   const k = maxBy(played, (p) => p.kills);
-  add('kills', 'crosshair', 'KOPFGELDJÄGER', 'Meiste K.O.s verursacht.', k, k && `${k.kills} K.O.`);
+  add('kills', 'crosshair', 'KOPFGELDJÄGER', 'Niemand ist sicher.', k, k && `${k.kills} K.O.`);
   const cd = maxBy(played, (p) => p.cmdDealt);
-  add('cmd', 'axe', 'COMMANDER-SCHLÄCHTER', 'Meister Commander-Schaden ausgeteilt.', cd, cd && `${cd.cmdDealt} SCHADEN`);
+  add('cmd', 'axe', 'COMMANDER-SCHLÄCHTER', '21 ist nur eine Zahl.', cd, cd && `${cd.cmdDealt} SCHADEN`);
   const po = maxBy(played, (p) => p.poison);
-  add('poison', 'potion', 'GIFTSCHLUCKER', 'Meiste Giftmarker kassiert.', po, po && `${po.poison} GIFT`);
+  add('poison', 'potion', 'GIFTSCHLUCKER', 'Langsam grün im Gesicht.', po, po && `${po.poison} GIFT`);
   const ml = maxBy(played, (p) => p.maxLife > 40 ? p.maxLife : null);
-  add('life', 'heart', 'LEBENSKÜNSTLER', 'Höchstes Leben des Tages.', ml, ml && `${ml.maxLife} LEBEN`);
+  add('life', 'heart', 'LEBENSKÜNSTLER', 'Lifegain ist auch eine Strategie.', ml, ml && `${ml.maxLife} LEBEN`);
   const cb = maxBy(played, (p) => p.comeback);
-  add('comeback', 'zombie', 'COMEBACK-KID', 'Gewonnen nach ≤ 10 Leben.', cb, cb && `${cb.comeback}× AUFERSTANDEN`);
+  add('comeback', 'zombie', 'COMEBACK-KID', 'Totgesagte leben länger.', cb, cb && `${cb.comeback}× AUFERSTANDEN`);
   const tap = maxBy(played, (p) => p.lifeLost);
-  add('punch', 'shield', 'PUNCHINGBALL', 'Meiste Lebenspunkte verloren.', tap, tap && `−${tap.lifeLost} LEBEN`);
+  add('punch', 'shield', 'PUNCHINGBALL', 'Steckt ein wie ein Profi.', tap, tap && `−${tap.lifeLost} LEBEN`);
   const nem = played.map((p) => p.nemesis && { p, n: p.nemesis }).filter(Boolean).sort((a, b) => b.n.n - a.n.n)[0];
-  if (nem && P[nem.n.pid]) A.push({ key: 'nemesis', sprite: 'ghost', title: 'FEHDE DES TAGES', quip: `${P[nem.n.pid].name} hat ${nem.p.name} ${nem.n.n}× rausgehauen.`, pid: nem.n.pid, name: `${P[nem.n.pid].name} → ${nem.p.name}`, value: `${nem.n.n}× K.O.` });
+  if (nem && P[nem.n.pid]) A.push({ key: 'nemesis', sprite: 'ghost', title: 'FEHDE DES TAGES', desc: DESC.nemesis, quip: `${P[nem.n.pid].name} hat ${nem.p.name} ${nem.n.n}× rausgehauen.`, pid: nem.n.pid, name: `${P[nem.n.pid].name} → ${nem.p.name}`, value: `${nem.n.n}× K.O.` });
   return A;
 }
 const clockish = (ms) => { const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000); return `${m}:${String(s).padStart(2, '0')} MIN`; };

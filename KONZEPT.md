@@ -118,7 +118,7 @@ Leaderboard des Tages.
 * ⚔️ Stärkster Commander (Siege, dann Winrate)
 * ⚡ Schnellster Sieg
 * 💀 Schnellstes Aus („Speedrun zum Tresen“)
-* ⏳ Längste Ingame-Zeit („Kakerlake“)
+* ⏳ Längste Ingame-Zeit („Dauerbrenner“)
 * 🍺 Längste Barzeit („Stammgast“)
 * 🗡️ Commander-Schlächter (meister Cmd-Schaden)
 * ☠️ Giftmischer (meiste Giftmarker kassiert)

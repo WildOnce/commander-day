@@ -58,7 +58,8 @@ function slides() {
       fx: a.key === 'best' ? 'confetti' : '',
       html: `<div class="tag">// ${esc(a.title)}</div>${sprite(a.sprite, 8, 'pop bob')}
         <div class="who ${a.key === 'fastout' ? 'alert' : a.key === 'best' ? 'gold' : ''}">${esc(a.name)}</div>
-        <div class="h2">${esc(a.value || '')}</div><div class="small muted">${esc(a.quip)}</div>`,
+        <div class="h2">${esc(a.value || '')}</div><div class="small muted">${esc(a.quip)}</div>
+        ${a.desc ? `<div class="tag" style="max-width:320px;text-transform:none;line-height:1.4;margin-top:4px">ⓘ ${esc(a.desc)}</div>` : ''}`,
     });
   }
   const lb = S.leaderboard.filter((p) => p.games).slice(0, 8);
