@@ -96,8 +96,8 @@ export function lifeView() {
   const s = A.snap;
   const ref = currentRef();
   if (!ref) {
-    return { html: panel('LIFE COUNTER', `<div class="row" style="gap:14px">${sprite('beer', 4, 'float')}<div><div class="h2">KEIN TISCH</div>
-      <div class="muted small">Du bist gerade keinem Tisch zugeteilt. Warte auf die Auslosung — oder ab an die Bar.</div></div></div>`), tabs: true };
+    return { html: panel('LIFE COUNTER', `<div class="row" style="gap:14px">${sprite('beer', 4, 'float')}<div><div class="h2">${Date.now() < s.config.eventStart ? "NOCH NICHT" : "KEIN TISCH"}</div>
+      <div class="muted small">${Date.now() < s.config.eventStart ? 'Der Life Counter wird am Spieltag freigeschaltet, sobald die Tische ausgelost sind.' : 'Du bist gerade keinem Tisch zugeteilt. Warte auf die Auslosung — oder ab an die Bar.'}</div></div></div>`), tabs: true };
   }
   const g = s.G[ref.gid];
   if (!g) return { html: preStart(ref), tabs: true };

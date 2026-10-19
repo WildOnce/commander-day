@@ -157,6 +157,7 @@ function registerView() {
       : `<form data-form="register" class="stack"><div class="row" style="gap:12px">${sprite('knight', 4, 'bob')}<div class="small muted">Wie heißt du, Planeswalker?</div></div>
         <input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="NAME" required><input class="in code" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" placeholder="PIN (4–6 ZIFFERN)" required><div class="tag" style="text-transform:none">Mit Name + PIN kommst du später (auch auf einem anderen Handy) wieder in dein Profil.</div>
         <button class="btn pri block">→ ANMELDEN</button></form>`, { cls: 'hi', right: `${s.players.length}/${s.config.maxPlayers}` })}
+    ${Date.now() < s.config.eventStart ? eventInfoPanel() : ''}
     ${s.players.length ? panel('SCHON ANGEMELDET? NAME WÄHLEN + PIN', `<div class="row wrap">${s.players.map((p) => `<button class="chip" data-act="claim" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`) : ''}
     <button class="btn block" data-act="logout">← ANDERER CODE</button></div>` };
 }
@@ -193,7 +194,10 @@ function homeView() {
   if (s.config.wrappedAt) out.push(panel('WRAPPED IST DA', `<div class="row" style="gap:14px">${sprite('trophy', 4, 'bob')}<div class="grow"><div class="h2">DEIN TAG IN PIXELN</div><div class="small muted">Awards, Nemesis, Barzeit …</div></div></div>
     <button class="btn pri block" style="margin-top:10px" data-act="wr-open">▶ WRAPPED ÖFFNEN</button>`, { cls: 'hi' }));
   if (!m.decks?.length) out.push(panel('ACHTUNG', `<div class="small">Du hast noch keine Decks hinterlegt.</div><button class="btn block" style="margin-top:8px" data-act="nav" data-to="decks">◎ DECKS EINTRAGEN</button>`, { cls: 'alert' }));
-  if (!s.live) {
+  if (!s.live && Date.now() < s.config.eventStart) {
+    out.push(countdownPanel());
+    out.push(eventInfoPanel());
+  } else if (!s.live) {
     out.push(panel('STATUS', `<div class="row" style="gap:16px">${sprite('star', 5, 'float')}<div><div class="h2">WARTE AUF AUSLOSUNG<span class="cursor"></span></div>
       <div class="small muted">Der Host würfelt gleich die Tische. Du bekommst Tisch-Nr. und Mitspieler hier angezeigt.</div></div></div>`));
   } else if (ref) {
@@ -219,6 +223,26 @@ function homeView() {
   }
   out.push(panel('REGELN', leader('PODS', `${s.config.tableSize}ER`) + leader('SPIELZEIT', `${s.config.playMin} MIN`) + leader('OVERTIME', `${s.config.otMin} MIN`) + leader('DANACH', 'UNENTSCHIEDEN') + leader('STIMMUNG', 'ENTSPANNT 🍺')));
   return `<div class="stack">${out.join('')}</div>`;
+}
+
+const cdParts = (ms) => {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  return [Math.floor(t / 86400), Math.floor((t % 86400) / 3600), Math.floor((t % 3600) / 60), t % 60];
+};
+function countdownPanel() {
+  const [d, h, m, sec] = cdParts(A.snap.config.eventStart - Date.now());
+  const cell = (v, l, k) => `<div style="background:var(--tile2);border-radius:16px;padding:10px 4px;text-align:center">
+    <div class="big" style="font-size:44px" data-cd="${k}">${String(v).padStart(2, '0')}</div><div class="tag" style="margin-top:2px">${l}</div></div>`;
+  return panel('COUNTDOWN', `<div class="row" style="gap:14px;margin-bottom:12px">${sprite('rider', 3, 'bob')}<div><div class="h1" style="font-size:40px">BALD GEHT'S LOS<span class="cursor"></span></div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${cell(d, 'TAGE', 0)}${cell(h, 'STD', 1)}${cell(m, 'MIN', 2)}${cell(sec, 'SEK', 3)}</div>
+    <div class="small muted" style="margin-top:12px">Tische werden erst am Spieltag ausgelost. Bis dahin: Decks eintragen &amp; Sleeves polieren. ✨</div>`, { cls: 'hi', right: '<span class="notch"></span>' });
+}
+function eventInfoPanel() {
+  const c = A.snap.config;
+  const info = (ico, l, v) => `<div class="row" style="gap:12px;padding:6px 0"><span style="font-size:22px;width:30px;text-align:center">${ico}</span><div><div class="tag">${l}</div><div class="h2" style="font-size:19px">${esc(v)}</div></div></div>`;
+  return panel('EVENT-INFOS', info('📅', 'Wann', c.eventDate) + info('📍', 'Wo', c.eventPlace) + info('🕛', 'Uhrzeit', c.eventTime) +
+    `<div class="row wrap" style="margin-top:8px"><span class="chip">${c.tableSize}ER PODS</span><span class="chip">${c.playMin}+${c.otMin} MIN</span><span class="chip">KEIN STRESS 🍺</span></div>
+    ${me() ? `<button class="btn pri block" style="margin-top:12px" data-act="nav" data-to="decks">◎ DECKS EINTRAGEN</button>` : ''}`);
 }
 
 function freePanel() {
@@ -483,11 +507,16 @@ function liveView() {
   return `<div class="stack">${out.join('')}</div>`;
 }
 
+const localDT = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
+
 function hostSetup() {
   const c = A.snap.config;
   const num = (f, l, min, max) => `<div><label class="lbl">${l}</label><input class="in" type="number" inputmode="numeric" min="${min}" max="${max}" data-cfg="${f}" value="${c[f]}"></div>`;
   return `<div class="stack">${topbar('// HOST · SETUP')}
     ${panel('EVENT', `<div class="stack"><div><label class="lbl">Eventname</label><input class="in" data-cfg="name" value="${esc(c.name)}"></div>
+      <div><label class="lbl">Start (Countdown-Ziel)</label><input class="in" type="datetime-local" data-cfg="eventStart" value="${localDT(c.eventStart)}"></div>
+      <div><label class="lbl">Datum (Anzeige)</label><input class="in" data-cfg="eventDate" value="${esc(c.eventDate)}"></div>
+      <div class="grid2"><div><label class="lbl">Ort</label><input class="in" data-cfg="eventPlace" value="${esc(c.eventPlace)}"></div><div><label class="lbl">Uhrzeit</label><input class="in" data-cfg="eventTime" value="${esc(c.eventTime)}"></div></div>
       <div class="grid2">${num('playMin', 'Spielzeit (min)', 10, 240)}${num('otMin', 'Overtime (min)', 0, 60)}${num('tableSize', 'Spieler pro Tisch', 2, 6)}${num('maxPlayers', 'Max. Spieler', 2, 40)}${num('autoMinLeft', 'Auto-Tisch nur wenn ≥ min übrig', 0, 120)}</div>
       <div class="toggle ${c.smart ? 'on' : ''}" data-act="h-toggle" data-f="smart"><span class="small">INTELLIGENTES MATCHING</span><span class="sw"></span></div>
       <div class="toggle ${c.autoTables ? 'on' : ''}" data-act="h-toggle" data-f="autoTables"><span class="small">AUTO-TISCHE AUS AUSGESCHIEDENEN</span><span class="sw"></span></div></div>`)}
@@ -507,6 +536,13 @@ let lastTick = 0;
 function tick() {
   if (!store.prefix || !A.snap) return;
   refresh();
+  // event countdown
+  const cds = document.querySelectorAll('[data-cd]');
+  if (cds.length) {
+    const left = A.snap.config.eventStart - Date.now();
+    if (left <= 0) render();
+    else { const p = cdParts(left); cds.forEach((el) => { const v = String(p[+el.dataset.cd]).padStart(2, '0'); if (el.textContent !== v) el.textContent = v; }); }
+  }
   // live timer text
   for (const el of document.querySelectorAll('[data-timer]')) {
     const r = A.snap.rounds.find((x) => x.id === el.dataset.timer);
@@ -772,7 +808,9 @@ document.addEventListener('change', (e) => {
   if (el.dataset.chg && actions[el.dataset.chg]) return actions[el.dataset.chg](el, e);
   if (el.dataset.cfg) {
     const f = el.dataset.cfg;
-    const v = el.type === 'number' ? Math.max(+el.min || 0, Math.min(+el.max || 999, parseInt(el.value, 10) || 0)) : el.value.trim();
+    const v = el.type === 'number' ? Math.max(+el.min || 0, Math.min(+el.max || 999, parseInt(el.value, 10) || 0))
+      : el.type === 'datetime-local' ? new Date(el.value).getTime() : el.value.trim();
+    if (el.type === 'datetime-local' && !isFinite(v)) return;
     putCfg({ [f]: v });
   }
 });
