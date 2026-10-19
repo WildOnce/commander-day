@@ -42,7 +42,7 @@ export function timerLabel(round, cfg) {
 /* ───────────── mutations ───────────── */
 
 export function mutate(gid, fn, { debounce = 300 } = {}) {
-  const cur = A.snap.G[gid];
+  const cur = store.get('game/' + gid); // always the freshest local state, never a stale snapshot
   if (!cur) return;
   const g = structuredClone(cur);
   (A.undo[gid] ||= []).push(cur);
@@ -57,7 +57,7 @@ export function mutate(gid, fn, { debounce = 300 } = {}) {
 }
 
 function bump(gid, i, d) {
-  const g = A.snap.G[gid];
+  const g = store.get('game/' + gid);
   if (!g || g.controller !== DEVICE) return;
   mutate(gid, (x) => setLife(x, x.seats[i].pid, d));
   const k = gid + ':' + i;

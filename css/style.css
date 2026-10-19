@@ -27,7 +27,7 @@ a { color: inherit; }
 /* ───── type ───── */
 .h1 { font-family: var(--dot); font-weight: 900; font-size: 46px; line-height: .95; margin: 2px 0; letter-spacing: -.01em; text-transform: uppercase; }
 .h2 { font-family: var(--sans); font-weight: 800; font-size: 24px; line-height: 1.05; margin: 0; letter-spacing: -.02em; }
-.big { font-family: var(--dot); font-weight: 900; font-size: 64px; line-height: .9; letter-spacing: -.02em; }
+.big { font-family: var(--sans); font-weight: 800; font-size: 64px; line-height: .9; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .num { font-family: var(--sans); font-weight: 800; letter-spacing: -.05em; }
 .tag { font-family: var(--mono); font-size: 11px; color: var(--mid); text-transform: uppercase; letter-spacing: .04em; }
 .muted { color: var(--mid); } .dim { color: var(--dim); } .gold { color: var(--gold); } .alert { color: var(--alert); } .acc { color: var(--accent); }
@@ -202,7 +202,7 @@ body.lc .tabs { display: none; }
 .tile .deadfx .ko { font-family: var(--dot); font-weight: 900; font-size: 44px; color: var(--alert); letter-spacing: .06em; line-height: 1; }
 .tile .deadfx .nm { font-weight: 800; text-transform: uppercase; }
 .lcmid { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; gap: 8px; flex: none; background: #000; }
-.lcmid .tm { font-family: var(--dot); font-weight: 900; font-size: 26px; background: var(--paper); color: var(--ink); border-radius: 999px; padding: 2px 16px; white-space: nowrap; }
+.lcmid .tm { font-family: var(--sans); font-weight: 800; font-size: 24px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; background: var(--paper); color: var(--ink); border-radius: 999px; padding: 2px 16px; white-space: nowrap; }
 .lcmid .tm.ot { background: var(--alert); color: #111; animation: blink 1s steps(1) infinite; }
 .lcmid .ib { width: 44px; height: 40px; border: 0; border-radius: 999px; background: var(--tile2); color: var(--fg); font-size: 18px; cursor: pointer; }
 .lcmid .tag { color: var(--mid); }
