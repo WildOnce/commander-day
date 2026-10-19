@@ -155,9 +155,9 @@ function registerView() {
     ${panel('ANMELDUNG', full
       ? `<div class="alert">✕ EVENT VOLL (${s.players.length}/${s.config.maxPlayers}). Sprich mit dem Host.</div>`
       : `<form data-form="register" class="stack"><div class="row" style="gap:12px">${sprite('knight', 4, 'bob')}<div class="small muted">Wie heißt du, Planeswalker?</div></div>
-        <input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="NAME" required>
+        <input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="NAME" required><input class="in code" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" placeholder="PIN (4–6 ZIFFERN)" required><div class="tag" style="text-transform:none">Mit Name + PIN kommst du später (auch auf einem anderen Handy) wieder in dein Profil.</div>
         <button class="btn pri block">→ ANMELDEN</button></form>`, { cls: 'hi', right: `${s.players.length}/${s.config.maxPlayers}` })}
-    ${s.players.length ? panel('SCHON ANGEMELDET? DAS BIN ICH:', `<div class="row wrap">${s.players.map((p) => `<button class="chip" data-act="claim" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`) : ''}
+    ${s.players.length ? panel('SCHON ANGEMELDET? NAME WÄHLEN + PIN', `<div class="row wrap">${s.players.map((p) => `<button class="chip" data-act="claim" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`) : ''}
     <button class="btn block" data-act="logout">← ANDERER CODE</button></div>` };
 }
 
@@ -263,7 +263,8 @@ function decksView() {
     <button class="chip" data-act="deck-edit" data-id="${x.id}">✎</button>
     <button class="chip alert" data-act="deck-del" data-id="${x.id}">✕</button></div>`).join('');
   return `<div class="stack">${topbar('// DECK-ARCHIV')}
-    ${panel('PROFIL', `<div class="between"><div class="h2">${esc(m.name)}</div><button class="chip" data-act="rename">✎ NAME</button></div>`)}
+    ${panel('PROFIL', `<div class="between"><div class="h2">${esc(m.name)}</div><button class="chip" data-act="rename">✎ NAME</button></div>
+      <div class="row" style="margin-top:10px"><button class="chip" data-act="set-pin">⚿ ${m.pinHash ? 'PIN ÄNDERN' : 'PIN FESTLEGEN'}</button><button class="chip" data-act="me-logout">⏻ ABMELDEN</button></div>`)}
     ${panel(`DEINE COMMANDER · ${decks.length}/${MAX_DECKS}`, list || '<div class="dim small">NOCH KEINE DECKS. TRAG UNTEN DEINEN ERSTEN COMMANDER EIN.</div>')}
     ${decks.length < MAX_DECKS || d.editId ? panel(d.editId ? 'DECK BEARBEITEN' : 'DECK HINZUFÜGEN', `<div class="stack">
       <div class="ac"><label class="lbl">Commander (Scryfall-Suche)</label>
@@ -357,7 +358,7 @@ function hostPlayers() {
   const join = `${base}?c=${encodeURIComponent(store.code)}`;
   const rows = s.players.map((p) => `<div class="deck"><div class="nm"><b class="up">${esc(p.name)}</b><span class="tag">${p.decks?.length || 0} DECKS${p.decks?.[0] ? ' · ' + esc(p.decks[0].name) : ''}</span></div>
     <button class="chip ${p.present !== false ? 'sel' : 'off'}" data-act="h-present" data-id="${p.id}">${p.present !== false ? 'DA' : 'WEG'}</button>
-    <button class="chip" data-act="h-rename" data-id="${p.id}">✎</button><button class="chip alert" data-act="h-delp" data-id="${p.id}">✕</button></div>`).join('');
+    <button class="chip" data-act="h-rename" data-id="${p.id}">✎</button>${p.pinHash ? `<button class="chip" data-act="h-resetpin" data-id="${p.id}" title="PIN zurücksetzen">⚿</button>` : ''}<button class="chip alert" data-act="h-delp" data-id="${p.id}">✕</button></div>`).join('');
   return `<div class="stack">${topbar('// HOST · SPIELER')}
     ${panel('EINLADEN', `<div class="row" style="gap:14px;align-items:flex-start"><div class="qr" data-qr="${esc(join)}"></div>
       <div class="small" style="min-width:0"><div class="tag">EVENT-CODE</div><div class="h1">${esc(store.code)}</div><div class="tag" style="margin-top:6px">LINK</div><div style="word-break:break-all">${esc(base)}</div></div></div>
@@ -371,7 +372,7 @@ function hostJoinView() {
   const s = A.snap;
   return `<div class="stack">${topbar('// HOST · ICH SPIELE MIT')}
     ${panel('SELBST MITSPIELEN', `<div class="row" style="gap:12px">${sprite('knight', 4, 'bob')}<div class="small muted">Als Host kannst du ganz normal mitspielen: eigener Tisch, Life Counter, Decks, Stats & Wrapped.</div></div>
-      <form data-form="register" class="stack" style="margin-top:10px"><input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="DEIN NAME" required>
+      <form data-form="register" class="stack" style="margin-top:10px"><input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="DEIN NAME" required><input class="in code" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" placeholder="PIN (4–6 ZIFFERN)" required><div class="tag" style="text-transform:none">Mit Name + PIN kommst du später (auch auf einem anderen Handy) wieder in dein Profil.</div>
       <button class="btn pri block">+ ALS SPIELER EINTRAGEN</button></form>`, { cls: 'hi' })}
     ${s.players.length ? panel('ODER: DAS BIN ICH', `<div class="row wrap">${s.players.map((p) => `<button class="chip" data-act="claim" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`) : ''}</div>`;
 }
@@ -579,11 +580,35 @@ const actions = {
     if (MODE === 'host') ls.del(hostKey());
     ls.del('cz.code'); store.close(); store.prefix = null; A.me = null; A.ui = {}; render();
   },
-  claim(el) {
+  async claim(el) {
     const p = A.snap.P[el.dataset.id];
-    if (!p || !confirm(`Bist du wirklich ${p.name}?`)) return;
+    if (!p) return;
+    if (p.pinHash) {
+      if (MODE !== 'host') {
+        const pin = prompt(`PIN für ${p.name}`);
+        if (pin == null) return;
+        if ((await sha(`ppin:${p.id}:${pin.trim()}`)) !== p.pinHash) return toast('<span class="alert">✕ FALSCHE PIN</span> · PIN VERGESSEN? FRAG DEN HOST.', 4000);
+      } else if (!confirm(`Als ${p.name} mitspielen?`)) return;
+    } else {
+      const pin = prompt(`${p.name} hat noch keine PIN. Lege jetzt eine fest (4–6 Ziffern):`);
+      if (pin == null) return;
+      if (!/^\d{4,6}$/.test(pin.trim())) return toast('PIN: 4–6 ZIFFERN');
+      putPlayer({ ...p, pinHash: await sha(`ppin:${p.id}:${pin.trim()}`) });
+    }
     A.me = p.id; ls.set(meKey(), p.id); go(MODE === 'host' ? 'me' : 'home');
+    toast(`WILLKOMMEN ZURÜCK, ${esc(p.name).toUpperCase()}`);
   },
+  async 'set-pin'() {
+    const m = me(); const pin = prompt('Neue PIN (4–6 Ziffern)');
+    if (pin == null) return;
+    if (!/^\d{4,6}$/.test(pin.trim())) return toast('PIN: 4–6 ZIFFERN');
+    putPlayer({ ...m, pinHash: await sha(`ppin:${m.id}:${pin.trim()}`) }); toast('PIN GESPEICHERT');
+  },
+  'me-logout'() {
+    if (!confirm('Von diesem Gerät abmelden? Mit Name + PIN kommst du jederzeit wieder rein.')) return;
+    ls.del(meKey()); A.me = null; A.draft = null; go(MODE === 'host' ? 'me' : 'home');
+  },
+  'h-resetpin'(el) { const p = A.snap.P[el.dataset.id]; if (confirm(`PIN von ${p.name} zurücksetzen? Beim nächsten Login legt ${p.name} eine neue fest.`)) putPlayer({ ...p, pinHash: null }); },
   pause() { const m = me(); const id = A.snap.live?.id; putPlayer({ ...m, pauseRound: m.pauseRound === id ? null : id }); },
   'assign-ok'(el) { A.ui.assign = null; if (el.dataset.to) go(el.dataset.to); else render(); },
   copy(el) { navigator.clipboard?.writeText(el.dataset.v).then(() => toast('⧉ KOPIERT')); },
@@ -711,13 +736,16 @@ const forms = {
     if (!A.ui.pinErr) ls.set(hostKey(), h);
     render();
   },
-  register(f) {
+  async register(f) {
     const s = A.snap;
     const name = f.name.value.trim().slice(0, 16);
+    const pin = f.pin.value.trim();
     if (!name) return;
-    if (s.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) return toast('NAME SCHON VERGEBEN — ODER UNTEN „DAS BIN ICH“ WÄHLEN');
+    if (!/^\d{4,6}$/.test(pin)) return toast('PIN: 4–6 ZIFFERN');
+    if (s.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) return toast('NAME SCHON VERGEBEN — UNTEN NAME WÄHLEN + PIN');
     if (s.players.length >= s.config.maxPlayers) return toast('EVENT VOLL');
-    const p = { id: uid(8), name, decks: [], present: true, joinedAt: Date.now() };
+    const id = uid(8);
+    const p = { id, name, decks: [], present: true, joinedAt: Date.now(), pinHash: await sha(`ppin:${id}:${pin}`) };
     putPlayer(p);
     A.me = p.id; ls.set(meKey(), p.id);
     go('decks');

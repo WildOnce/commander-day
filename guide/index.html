@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=540">
+<title>COMMAND//ZONE Anleitung</title>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=Inter+Tight:wght@500;700;800&family=JetBrains+Mono:wght@400;700&display=block" rel="stylesheet">
+<style>
+  :root { --bg:#0d0d0d; --tile:#1a1a1a; --tile2:#262626; --paper:#ececea; --ink:#111; --fg:#f5f5f3; --mid:#9b9b98; --accent:#ff6a00; --alert:#ff3b30; --gold:#ffc53d;
+    --p1:#3d8bff; --p2:#2fd27a; --p3:#ff4fa3; --sans:'Inter Tight',sans-serif; --mono:'JetBrains Mono',monospace; --dot:'Doto',monospace; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: var(--bg); color: var(--fg); font-family: var(--sans); }
+  body { width: 540px; height: 960px; overflow: hidden; padding: 22px 18px;
+    background-image: radial-gradient(rgba(255,255,255,.07) 1.2px, transparent 1.6px); background-size: 9px 9px; display: flex; flex-direction: column; gap: 10px; }
+  .tile { background: var(--tile); border-radius: 22px; padding: 14px 16px; }
+  .paper { background: var(--paper); color: var(--ink); --mid:#6b6b68; --tile2:#dcdcd8; }
+  .acc { background: var(--accent); color: var(--ink); --mid:#4a2400; }
+  .tag { font-family: var(--mono); font-size: 10.5px; color: var(--mid); text-transform: uppercase; letter-spacing: .04em; }
+  .tag::before { content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:currentColor; margin-right:6px; vertical-align:1px; }
+  .dot { font-family: var(--dot); font-weight: 900; text-transform: uppercase; line-height: .95; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  h1 { font-family: var(--dot); font-weight: 900; font-size: 40px; line-height: .95; }
+  .num { font-weight: 800; letter-spacing: -.03em; }
+  .step { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; font-size: 14px; line-height: 1.3; }
+  .step b { font-weight: 800; }
+  .n { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--fg); color: var(--bg); font-weight: 800; font-size: 13px; display: grid; place-items: center; }
+  .paper .n { background: var(--ink); color: var(--paper); }
+  .acc .n { background: var(--ink); color: var(--accent); }
+  .ico { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 6px; background: var(--tile2); font-size: 12px; font-weight: 800; vertical-align: -5px; }
+  .qr { background: #fff; border-radius: 14px; padding: 8px; flex: none; }
+  .qr svg { display: block; width: 116px; height: 116px; }
+  .big { font-family: var(--dot); font-weight: 900; font-size: 46px; letter-spacing: .02em; line-height: 1; }
+  .link { font-weight: 800; font-size: 16px; word-break: break-all; }
+  .phone { border-radius: 18px; padding: 12px 14px; }
+  .os { font-weight: 800; font-size: 18px; display:flex; align-items:center; gap:8px; margin-bottom: 4px; }
+  .foot { font-family: var(--mono); font-size: 10.5px; color: var(--mid); text-align: center; margin-top: auto; text-transform: uppercase; }
+  .chip { display:inline-block; border-radius: 999px; padding: 3px 9px; font-family: var(--mono); font-size: 10.5px; font-weight: 700; }
+</style>
+</head>
+<body>
+<script src="../vendor/qrcode.js"></script>
+<script type="module">
+import { sprite } from '../js/sprites.js';
+const host = new URLSearchParams(location.search).get('mode') === 'host';
+const BASE = 'https://wildonce.github.io/commander-day/';
+const URL_ = host ? BASE + 'host.html' : BASE;
+const CODE = 'ZONE-4040';
+const qr = (t) => { const q = qrcode(0, 'M'); q.addData(t); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0 }); };
+const install = `
+  <div class="tile" style="padding-bottom:10px"><div class="tag">Schritt 1 · Als App installieren (einmalig)</div>
+  <div class="grid2" style="margin-top:8px">
+    <div class="phone paper"><div class="os"> iPhone</div>
+      <div class="step"><span class="n">1</span><span>Link in <b>Safari</b> öffnen</span></div>
+      <div class="step"><span class="n">2</span><span>Unten auf <span class="ico">⬆︎</span> <b>Teilen</b> tippen</span></div>
+      <div class="step"><span class="n">3</span><span><b>„Zum Home-Bildschirm“</b> → <b>Hinzufügen</b></span></div>
+    </div>
+    <div class="phone paper"><div class="os">🤖 Android</div>
+      <div class="step"><span class="n">1</span><span>Link in <b>Chrome</b> öffnen</span></div>
+      <div class="step"><span class="n">2</span><span>Oben rechts <span class="ico">⋮</span> tippen</span></div>
+      <div class="step"><span class="n">3</span><span><b>„App installieren“</b> bzw. „Zum Startbildschirm“</span></div>
+    </div>
+  </div>
+  <div class="tag" style="margin-top:8px;text-transform:none">Danach startest du ${host ? '<b style="color:var(--fg)">CZ HOST</b>' : '<b style="color:var(--fg)">COMMAND//ZONE</b>'} wie eine normale App vom Homescreen.</div></div>`;
+
+const player = `
+  <div class="row" style="justify-content:space-between"><div><div class="tag">Commander-Tag · Spieler-Anleitung</div><h1>COMMAND//<br>ZONE</h1></div>${sprite('rider', 5)}</div>
+  <div class="tile acc"><div class="row" style="gap:14px"><div class="qr">${qr(BASE + '?c=' + CODE)}</div>
+    <div style="min-width:0"><div class="tag">Link</div><div class="link">wildonce.github.io/<br>commander-day</div>
+    <div class="tag" style="margin-top:8px">Event-Code</div><div class="big">${CODE}</div></div></div></div>
+  ${install}
+  <div class="tile paper"><div class="tag">Schritt 2 · Anmelden</div>
+    <div class="step"><span class="n">1</span><span>Event-Code <b>${CODE}</b> eingeben → <b>Verbinden</b></span></div>
+    <div class="step"><span class="n">2</span><span><b>Namen</b> + eigene <b>PIN</b> (4–6 Ziffern) → <b>Anmelden</b></span></div>
+    <div class="step"><span class="n">3</span><span>Unter <b>DECKS</b> deine Commander suchen & hinzufügen (bis zu 15). Oberstes Deck = Standard.</span></div>
+    <div class="step"><span class="n">↺</span><span>Später nochwas ändern / neues Handy? Code eingeben → <b>deinen Namen wählen + PIN</b>.</span></div></div>
+  <div class="tile"><div class="tag">Schritt 3 · Am Spieltag</div>
+    <div class="step"><span class="n">▣</span><span>Unter <b>TISCH</b> siehst du deine <b>Tischnummer</b> und mit wem du spielst – bei jeder neuen Runde ploppt es auf.</span></div>
+    <div class="step"><span class="n">♥</span><span><b>Einer pro Tisch</b> startet den <b>Life Counter</b>. Timer kommt automatisch vom Host (80 + 10 min).</span></div>
+    <div class="step"><span class="n">◉</span><span>Raus? Ab an die Bar 🍺 – unter <b>LIVE</b> siehst du, wer gerade ins Schwitzen kommt.</span></div></div>
+  <div class="foot">Kein Stress · kein Turnier · einfach ein schöner Magic-Tag 🤘</div>`;
+
+const hostG = `
+  <div class="row" style="justify-content:space-between"><div><div class="tag">Commander-Tag · Host-Anleitung</div><h1>CZ<br>HOST</h1></div>${sprite('knight', 6)}</div>
+  <div class="tile acc"><div class="row" style="gap:14px"><div class="qr">${qr(URL_)}</div>
+    <div style="min-width:0"><div class="tag">Host-Link</div><div class="link">wildonce.github.io/<br>commander-day/host.html</div>
+    <div class="tag" style="margin-top:8px">Event-Code + Host-PIN</div><div class="big" style="font-size:38px">${CODE}</div><div class="tag" style="text-transform:none">PIN kommt separat 🔒</div></div></div></div>
+  ${install}
+  <div class="tile paper"><div class="tag">Schritt 2 · Einloggen & vorbereiten</div>
+    <div class="step"><span class="n">1</span><span>Code <b>${CODE}</b> + <b>Host-PIN</b> eingeben</span></div>
+    <div class="step"><span class="n">2</span><span><b>SPIELER</b>: QR zeigen / Link teilen, Anwesenheit (DA/WEG), vergessene Spieler-PIN mit <b>⚿</b> zurücksetzen</span></div>
+    <div class="step"><span class="n">3</span><span>Selbst mitspielen? Tab <b>ICH</b> → als Spieler eintragen</span></div></div>
+  <div class="tile"><div class="tag">Schritt 3 · Jede Runde</div>
+    <div class="step"><span class="n">1</span><span><b>RUNDE</b> → <b>Würfeln</b> (Spieler antippen = tauschen) → <b>Veröffentlichen</b></span></div>
+    <div class="step"><span class="n">2</span><span>Wenn alle sitzen: <b>▶ Timer starten</b> – läuft auf allen Handys</span></div>
+    <div class="step"><span class="n">3</span><span><b>LIVE</b>: alle Tische, Ticker, Leaderboard. Danach <b>Nächste Runde würfeln</b></span></div>
+    <div class="step"><span class="n">★</span><span>Am Ende: <b>SETUP → Wrapped pushen</b> &amp; <b>Export</b> als Backup</span></div></div>
+  <div class="foot">Matching & Auto-Tische an/aus unter RUNDE · alles weitere unter SETUP</div>`;
+
+document.body.insertAdjacentHTML('beforeend', host ? hostG : player);
+document.fonts.ready.then(() => document.body.dataset.ready = '1');
+</script>
+</body>
+</html>
