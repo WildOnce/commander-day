@@ -1,15 +1,27 @@
 // Scryfall lookups + pixelated, phosphor-tinted commander art.
 const API = 'https://api.scryfall.com';
 
+const found = new Map();
+const toInfo = (c) => ({
+  name: c.name, colors: (c.color_identity || []).join(''),
+  art: c.image_uris?.art_crop || c.card_faces?.[0]?.image_uris?.art_crop || null,
+  partner: (c.keywords || []).some((k) => /partner|friends forever|background/i.test(k)),
+});
+
+/** Commander-only suggestions, most popular first (EDHREC rank). */
 export async function autocomplete(q) {
   if (q.length < 2) return [];
   try {
-    const r = await fetch(`${API}/cards/autocomplete?q=${encodeURIComponent(q)}`);
-    return (await r.json()).data?.slice(0, 8) || [];
+    const r = await fetch(`${API}/cards/search?q=${encodeURIComponent(`${q} is:commander`)}&order=edhrec&unique=cards`);
+    if (!r.ok) return [];
+    const list = (await r.json()).data?.slice(0, 8) || [];
+    list.forEach((c) => found.set(c.name, toInfo(c)));
+    return list.map((c) => c.name);
   } catch { return []; }
 }
 
 export async function cardInfo(name) {
+  if (found.has(name)) return found.get(name);
   try {
     const r = await fetch(`${API}/cards/named?exact=${encodeURIComponent(name)}`);
     if (!r.ok) return null;
