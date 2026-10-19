@@ -246,3 +246,4 @@ body.lc .tabs { display: none; }
 
 .lockbox { position: fixed; left: 50%; top: 75%; transform: translate(-50%, -50%); z-index: 7; width: min(92vw, 420px); background: var(--paper); color: var(--ink);
   --fg: #111; --mid: #555; border-radius: 24px; padding: 16px 18px; box-shadow: 0 16px 40px rgba(0, 0, 0, .55); pointer-events: none; }
+.lcw.locked .tile { filter: saturate(.25) brightness(.65); }

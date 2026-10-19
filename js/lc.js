@@ -139,7 +139,7 @@ function board(g, ref) {
   const lock = g.ended ? null : lockedFor(g.roundId);
   const tl = (i) => tile(g, i, ctrl && !lock, n);
   const ctrlSheets = ctrl;
-  let html = `<div class="lcw">
+  let html = `<div class="lcw ${lock ? 'locked' : ''}">
     ${nTop ? `<div class="lcrow flip" style="grid-template-columns:repeat(${top.length},1fr)">${top.map(tl).join('')}</div>` : ''}
     <div class="lcmid">
       <span class="row" style="gap:6px"><button class="ib" data-act="nav" data-to="${backTo()}" aria-label="Zurück zur Übersicht">←</button><button class="ib" data-act="lc-sheet" data-k="menu" aria-label="Menü">☰</button></span>
