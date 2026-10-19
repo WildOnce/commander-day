@@ -97,10 +97,10 @@ export function lifeView() {
   const ref = currentRef();
   if (!ref) {
     return { html: panel('LIFE COUNTER', `<div class="row" style="gap:14px">${sprite('beer', 4, 'float')}<div><div class="h2">KEIN TISCH</div>
-      <div class="muted small">Du bist gerade keinem Tisch zugeteilt. Warte auf die Auslosung — oder ab an die Bar.</div></div></div>`) };
+      <div class="muted small">Du bist gerade keinem Tisch zugeteilt. Warte auf die Auslosung — oder ab an die Bar.</div></div></div>`), tabs: true };
   }
   const g = s.G[ref.gid];
-  if (!g) return { html: preStart(ref) };
+  if (!g) return { html: preStart(ref), tabs: true };
   return { html: board(g, ref), full: true };
 }
 
@@ -132,10 +132,10 @@ function board(g, ref) {
   let html = `<div class="lcw">
     ${nTop ? `<div class="lcrow flip" style="grid-template-columns:repeat(${top.length},1fr)">${top.map(tl).join('')}</div>` : ''}
     <div class="lcmid">
-      <button class="ib" data-act="lc-sheet" data-k="menu" aria-label="Menü">☰</button>
+      <span class="row" style="gap:6px"><button class="ib" data-act="nav" data-to="${backTo()}" aria-label="Zurück zur Übersicht">←</button><button class="ib" data-act="lc-sheet" data-k="menu" aria-label="Menü">☰</button></span>
       <span class="tm ${ti.phase === 'ot' ? 'ot' : ''}" data-timer="${ref.round.id}">${txt}</span>
       <span class="tag">T${ref.table.no}</span>
-      ${ctrl ? `<button class="ib" data-act="lc-undo" data-g="${g.id}" aria-label="Rückgängig">↶</button>` : `<button class="ib" data-act="nav" data-to="${backTo()}">✕</button>`}
+      ${ctrl ? `<button class="ib" data-act="lc-undo" data-g="${g.id}" aria-label="Rückgängig">↶</button>` : '<span style="width:44px"></span>'}
     </div>
     <div class="lcrow" style="grid-template-columns:repeat(${bot.length},1fr)">${bot.map(tl).join('')}</div>
     ${!ctrl ? `<div class="viewer"><button class="chip" data-act="lc-take" data-g="${g.id}">LIVE · ${esc(g.controllerName || '?')} STEUERT · ÜBERNEHMEN</button></div>` : ''}
