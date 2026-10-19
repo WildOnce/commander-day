@@ -142,7 +142,7 @@ label.lbl { display: block; font-family: var(--mono); font-size: 11px; color: va
 .toast { position: fixed; left: 50%; top: calc(12px + var(--sat)); transform: translateX(-50%); z-index: 200; background: var(--paper); color: var(--ink); --fg: #111; --mid: #555;
   border-radius: 18px; padding: 12px 16px; max-width: 92vw; font-weight: 700; box-shadow: 0 12px 30px rgba(0, 0, 0, .5); animation: drop .25s steps(4); }
 @keyframes drop { from { transform: translate(-50%, -20px); opacity: 0; } }
-.overlay { position: fixed; inset: 0; z-index: 150; background: rgba(8, 8, 8, .9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+.overlay { position: fixed; inset: 0; z-index: 170; background: rgba(8, 8, 8, .9); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center; padding: 18px; animation: fade .2s steps(3); }
 @keyframes fade { from { opacity: 0; } }
 .overlay .box { width: 100%; max-width: 440px; max-height: 92dvh; overflow: auto; }

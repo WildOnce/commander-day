@@ -52,8 +52,9 @@ export function mutate(gid, fn, { debounce = 300 } = {}) {
   store.put('game/' + gid, g, { debounce });
   for (const s of fresh) {
     buzz([60, 40, 160]);
-    if (s.out.cause === 'life') A.ui.sheet = { type: 'who', i: g.seats.indexOf(s) };
+    if (s.out.cause === 'life' && !g.ended) A.ui.sheet = { type: 'who', i: g.seats.indexOf(s) };
   }
+  if (g.ended && !cur.ended) A.ui.sheet = null; // results take over the screen
 }
 
 function bump(gid, i, d) {
