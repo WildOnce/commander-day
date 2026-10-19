@@ -57,9 +57,16 @@ export function mutate(gid, fn, { debounce = 300 } = {}) {
   if (g.ended && !cur.ended) A.ui.sheet = null; // results take over the screen
 }
 
+/** Life totals can only change while the round timer runs (not before start, not while paused). */
+export function lockedFor(roundId) {
+  const r = A.snap.rounds.find((x) => x.id === roundId);
+  const ti = timerInfo(r, A.snap.config);
+  return ti.phase === 'idle' ? 'idle' : ti.paused ? 'paused' : null;
+}
+
 function bump(gid, i, d) {
   const g = store.get('game/' + gid);
-  if (!g || g.controller !== DEVICE) return;
+  if (!g || g.controller !== DEVICE || lockedFor(g.roundId)) return;
   mutate(gid, (x) => setLife(x, x.seats[i].pid, d));
   const k = gid + ':' + i;
   const prev = A.delta[k];
@@ -129,7 +136,9 @@ function board(g, ref) {
   const idx = g.seats.map((_, i) => i);
   const top = idx.slice(0, nTop), bot = idx.slice(nTop);
   const { txt, ti } = timerLabel(ref.round, s.config);
-  const tl = (i) => tile(g, i, ctrl, n);
+  const lock = g.ended ? null : lockedFor(g.roundId);
+  const tl = (i) => tile(g, i, ctrl && !lock, n);
+  const ctrlSheets = ctrl;
   let html = `<div class="lcw">
     ${nTop ? `<div class="lcrow flip" style="grid-template-columns:repeat(${top.length},1fr)">${top.map(tl).join('')}</div>` : ''}
     <div class="lcmid">
@@ -141,7 +150,10 @@ function board(g, ref) {
     <div class="lcrow" style="grid-template-columns:repeat(${bot.length},1fr)">${bot.map(tl).join('')}</div>
     ${!ctrl ? `<div class="viewer"><button class="chip" data-act="lc-take" data-g="${g.id}">LIVE · ${esc(g.controllerName || '?')} STEUERT · ÜBERNEHMEN</button></div>` : ''}
   </div>`;
-  html += sheetHtml(g, ref, ctrl, nTop);
+  if (lock) html += `<div class="lockbox"><div class="row" style="gap:14px">${sprite(lock === 'idle' ? 'star' : 'beer', 4, 'float')}<div>
+      <div class="h2">${lock === 'idle' ? 'WARTET AUF START' : 'PAUSE'}</div>
+      <div class="small muted">${lock === 'idle' ? 'Der Life Counter wird freigeschaltet, sobald der Host den Rundentimer startet.' : 'Der Host hat den Timer pausiert. Geht gleich weiter.'}${ctrl ? ' Commander kannst du schon über ⋯ wählen.' : ''}</div></div></div></div>`;
+  html += sheetHtml(g, ref, ctrlSheets, nTop);
   html += resultHtml(g, ref);
   return html;
 }
@@ -177,7 +189,7 @@ function tile(g, i, ctrl, n) {
     <div class="life">${s.life}</div>
     <div class="ctr">${ctr}</div>
     ${showD ? `<div class="delta ${dl.v < 0 ? 'neg' : ''}">${dl.v > 0 ? '+' : ''}${dl.v}</div>` : ''}
-    ${ctrl ? `<button class="more" data-act="lc-sheet" data-k="seat" data-i="${i}" aria-label="Details">⋯</button>` : ''}
+    ${ctrl || (g.controller === DEVICE && !g.ended) ? `<button class="more" data-act="lc-sheet" data-k="seat" data-i="${i}" aria-label="Details">⋯</button>` : ''}
     ${dead}
   </div>`;
 }
@@ -333,7 +345,8 @@ export const lcActions = {
   'lc-sheet'(el) { A.ui.sheet = { type: el.dataset.k, i: el.dataset.i != null ? +el.dataset.i : null }; render(); },
   'lc-close'() { A.ui.sheet = null; render(); },
   'lc-step'(el) {
-    const gid = gidNow(); const i = +el.dataset.i; const f = el.dataset.f; const d = +el.dataset.d;
+    const gid = gidNow();
+    if (lockedFor(A.snap.G[gid]?.roundId)) return toast('⏳ ERST WENN DER RUNDENTIMER LÄUFT'); const i = +el.dataset.i; const f = el.dataset.f; const d = +el.dataset.d;
     mutate(gid, (g) => {
       const s = g.seats[i];
       if (f === 'cmd') setCmd(g, s.pid, el.dataset.o, +el.dataset.x, d);
