@@ -27,7 +27,7 @@ a { color: inherit; }
 /* ───── type ───── */
 .h1 { font-family: var(--dot); font-weight: 900; font-size: 46px; line-height: .95; margin: 2px 0; letter-spacing: -.01em; text-transform: uppercase; }
 .h2 { font-family: var(--sans); font-weight: 800; font-size: 24px; line-height: 1.05; margin: 0; letter-spacing: -.02em; }
-.big { font-family: var(--sans); font-weight: 800; font-size: 64px; line-height: .9; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.big { white-space: nowrap; font-family: var(--sans); font-weight: 800; font-size: clamp(40px, 14vw, 64px); line-height: .9; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .num { font-family: var(--sans); font-weight: 800; letter-spacing: -.05em; }
 .tag { font-family: var(--mono); font-size: 11px; color: var(--mid); text-transform: uppercase; letter-spacing: .04em; }
 .muted { color: var(--mid); } .dim { color: var(--dim); } .gold { color: var(--gold); } .alert { color: var(--alert); } .acc { color: var(--accent); }
