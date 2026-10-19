@@ -63,7 +63,11 @@ function doRender() {
   const v = view();
   const res = typeof v === 'string' ? { html: v } : v;
   document.body.classList.toggle('lc', !!res.full);
+  const oldSheet = document.querySelector('[data-sheet]');
+  const sheetPos = oldSheet && { key: oldSheet.dataset.sheet, top: oldSheet.scrollTop };
   $app.innerHTML = res.html + (res.full || !res.tabs ? '' : tabs()) + assignOverlay();
+  const newSheet = document.querySelector('[data-sheet]');
+  if (newSheet && sheetPos && newSheet.dataset.sheet === sheetPos.key) newSheet.scrollTop = sheetPos.top;
   document.querySelectorAll('canvas[data-art]').forEach((c) => drawArt(c, c.dataset.art));
   document.querySelectorAll('[data-qr]').forEach((el) => {
     try { const q = window.qrcode(0, 'M'); q.addData(el.dataset.qr); q.make(); el.innerHTML = q.createSvgTag({ cellSize: 4, margin: 0 }); } catch {}

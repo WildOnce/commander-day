@@ -187,7 +187,11 @@ const stepper = (val, attrs) =>
 
 function sheetHtml(g, ref, ctrl, nTop) {
   const sh = A.ui.sheet;
-  if (!sh || !ctrl || sh.g && sh.g !== g.id) return '';
+  if (!sh || !ctrl || sh.g && sh.g !== g.id) { A.ui.sheetKey = null; return ''; }
+  // only animate when the sheet first opens – re-renders while it is open must not replay the slide-in
+  const key = `${g.id}:${sh.type}:${sh.i}`;
+  const still = A.ui.sheetKey === key ? 'still' : '';
+  A.ui.sheetKey = key;
   const rot = sh.i != null && sh.i < nTop ? 'rot' : '';
   const close = `<button class="btn sm" data-act="lc-close">✕</button>`;
   let body = '';
@@ -251,7 +255,7 @@ function sheetHtml(g, ref, ctrl, nTop) {
     }).join('');
     body = `<div class="between"><div class="h2">VERLAUF</div>${close}</div><div class="log" style="margin-top:8px">${rows || '<div class="dim">NOCH NICHTS PASSIERT.</div>'}</div>`;
   }
-  return `<div class="scrim" data-act="lc-close"></div><div class="sheet ${rot}">${body}</div>`;
+  return `<div class="scrim" data-act="lc-close"></div><div class="sheet ${rot} ${still}" data-sheet="${key}">${body}</div>`;
 }
 
 function resultHtml(g, ref) {

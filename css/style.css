@@ -150,6 +150,7 @@ label.lbl { display: block; font-family: var(--mono); font-size: 11px; color: va
   padding: 18px 16px calc(20px + var(--sab)); animation: up .2s steps(4); }
 .sheet.rot { inset: 0 0 auto 0; border-radius: 0 0 26px 26px; transform: rotate(180deg); animation: none; }
 @keyframes up { from { transform: translateY(40px); opacity: 0; } }
+.sheet.still { animation: none; }
 .scrim { position: fixed; inset: 0; z-index: 155; background: rgba(0, 0, 0, .6); }
 
 /* animation helpers */
