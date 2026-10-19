@@ -288,7 +288,8 @@ function decksView() {
     <button class="chip alert" data-act="deck-del" data-id="${x.id}">✕</button></div>`).join('');
   return `<div class="stack">${topbar('// DECK-ARCHIV')}
     ${panel('PROFIL', `<div class="between"><div class="h2">${esc(m.name)}</div><button class="chip" data-act="rename">✎ NAME</button></div>
-      <div class="row" style="margin-top:10px"><button class="chip" data-act="set-pin">⚿ ${m.pinHash ? 'PIN ÄNDERN' : 'PIN FESTLEGEN'}</button><button class="chip" data-act="me-logout">⏻ ABMELDEN</button></div>`)}
+      <div class="row" style="margin-top:10px"><button class="chip" data-act="set-pin">⚿ ${m.pinHash ? 'PIN ÄNDERN' : 'PIN FESTLEGEN'}</button><button class="chip" data-act="me-logout">⏻ ABMELDEN</button><button class="chip" data-act="logout">⇄ EVENT WECHSELN</button></div>
+      <div class="tag" style="margin-top:8px">EVENT-CODE: ${esc(store.code)}</div>`)}
     ${panel(`DEINE COMMANDER · ${decks.length}/${MAX_DECKS}`, list || '<div class="dim small">NOCH KEINE DECKS. TRAG UNTEN DEINEN ERSTEN COMMANDER EIN.</div>')}
     ${decks.length < MAX_DECKS || d.editId ? panel(d.editId ? 'DECK BEARBEITEN' : 'DECK HINZUFÜGEN', `<div class="stack">
       <div class="ac"><label class="lbl">Commander (Scryfall-Suche)</label>
