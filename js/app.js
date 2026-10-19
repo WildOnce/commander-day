@@ -233,7 +233,7 @@ function countdownPanel() {
   const [d, h, m, sec] = cdParts(A.snap.config.eventStart - Date.now());
   const cell = (v, l, k) => `<div style="background:var(--tile2);border-radius:16px;padding:10px 4px;text-align:center">
     <div class="big" style="font-size:44px" data-cd="${k}">${String(v).padStart(2, '0')}</div><div class="tag" style="margin-top:2px">${l}</div></div>`;
-  return panel('COUNTDOWN', `<div class="row" style="gap:14px;margin-bottom:12px">${sprite('rider', 3, 'bob')}<div><div class="h1" style="font-size:40px">BALD GEHT'S LOS<span class="cursor"></span></div></div></div>
+  return panel('COUNTDOWN', `<div class="row" style="gap:14px;margin-bottom:12px">${sprite('rider', 3, 'bob')}<div><div class="h1" style="font-size:clamp(26px,8vw,36px)">BALD GEHT'S<br>LOS<span class="cursor"></span></div></div></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${cell(d, 'TAGE', 0)}${cell(h, 'STD', 1)}${cell(m, 'MIN', 2)}${cell(sec, 'SEK', 3)}</div>
     <div class="small muted" style="margin-top:12px">Tische werden erst am Spieltag ausgelost. Bis dahin: Decks eintragen &amp; Sleeves polieren. ✨</div>`, { cls: 'hi', right: '<span class="notch"></span>' });
 }
