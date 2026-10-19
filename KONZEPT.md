@@ -1,8 +1,9 @@
 # COMMAND//ZONE — Konzept („Rezept“)
 
 Eine minimalistische Web-App (PWA) für einen entspannten Magic-the-Gathering-Commander-Tag
-mit 12 Spieler:innen in 4er-Pods. Look & Feel: grünes Phosphor-Terminal (CRT, Scanlines,
-Glow, Monospace, Punkt-Leader `STATUS ........ SILENT`), angelehnt an das Referenzbild.
+mit 12 Spieler:innen in 4er-Pods. Look & Feel v2: **Pixel-Game-Kern** (Pixel-Sprites, Dot-Matrix-Schrift,
+Pixel-Balken, Terminal-Microcopy) in **übersichtlichen Widget-Kacheln** (Nothing-OS / Teenage-Engineering-Anmutung):
+Punktraster-Hintergrund, Bento-Tiles, Orange als Akzent, feste **Spielerfarben pro Platz** – auf einen Blick lesbar.
 
 ---
 
@@ -29,12 +30,13 @@ Glow, Monospace, Punkt-Leader `STATUS ........ SILENT`), angelehnt an das Refere
 
 ### 3.1 Spieler-App (`/#/`)
 1. **Login** – Event-Code eingeben.
-2. **Anmeldung** – Name, Commander/Decks (Name + Farbidentität WUBRG), bis zu 5 Decks.
-3. **Home / Status** – „Nächste Runde“, eigener Tisch + Mitspieler, Rundentimer live.
+2. **Anmeldung** – Name, Commander/Decks (Scryfall-Suche nur Commander, Farbidentität + Art automatisch), bis zu **15 Decks**, jederzeit editierbar.
+3. **Home / Status** – Tisch-**Nummer** + „Du spielst mit …“ immer sichtbar, Popup + Vibration bei jeder neuen Zuweisung, Rundentimer live.
 4. **Life Counter** – startbar von *einem* Gerät pro Tisch; Tisch ist automatisch mit den
    ausgelosten Spieler:innen belegt. Andere Geräte am Tisch können live zuschauen oder übernehmen.
-5. **Stats** – Live-Statistiken des Tages (siehe §6).
-6. **Wrapped** – erscheint, sobald der Host es pusht (Story-Slides wie Spotify Wrapped).
+5. **LIVE** – Live-Ticker („Mira kommt ins Schwitzen 💦 · Tisch 2“), alle laufenden Spiele, Kennzahlen, Rundenhistorie. Wer ausgeschieden ist, bekommt den Ticker prominent auf dem Home-Screen.
+6. **Stats** – Live-Statistiken des Tages (siehe §7).
+7. **Wrapped** – erscheint, sobald der Host es pusht (Story-Slides wie Spotify Wrapped).
 
 ### 3.2 Host-App (`/#/host`)
 1. **Setup** – Eventname, Event-Code, Host-PIN, Spielzeit (80) + Overtime (10), Tischgröße (4).
@@ -42,7 +44,10 @@ Glow, Monospace, Punkt-Leader `STATUS ........ SILENT`), angelehnt an das Refere
 3. **Runde würfeln** – Zufallsgenerator mit Wiederholungs-Minimierung, Vorschau, Neu würfeln,
    Spieler:innen manuell zwischen Tischen tauschen, dann „Runde veröffentlichen“.
 4. **Timer** – Start / Pause / +5 min / Stopp. Der Timer läuft synchron auf allen Life Countern.
-5. **Live-Übersicht** – alle Tische mit Lebenspunkten, wer raus ist, Status.
+5. **Live-Auswertung** – Kennzahlen (laufend / beendet / K.O.s / an der Bar), Live-Ticker, alle Tische mit
+   Lebenspunkten, Commander-Schaden, Gift, Ergebnissen, Leaderboard, Awards und Historie aller Runden.
+5b. **ICH** – der Host spielt selbst mit: eigener Tisch, Life Counter, Decks – direkt in der Host-App.
+5c. **Matching-Schalter** – Intelligentes Matching an/aus, Auto-Tische an/aus.
 6. **Wrapped pushen** – am Ende des Tages.
 7. **Backup** – Export/Import als JSON (Sicherheitsnetz).
 
@@ -62,12 +67,21 @@ ERGEBNIS: Platz 1–4 auf jedem Life Counter (Eliminationsreihenfolge)
 Bei Zeitablauf teilen sich alle Überlebenden Platz 1 als **Unentschieden** (Anzeige sortiert nach
 Leben, aber gewertet als Draw).
 
-## 5. Pairing-Algorithmus („neue Konstellationen“)
+## 5. Pairing-Algorithmus („neue Konstellationen“) – vom Host ein-/ausschaltbar
 
 * Anwesende Spieler:innen → Tische mit 4 (bei Rest automatisch 3er/5er-Tische).
 * Für jedes Paar (A,B) wird gezählt, wie oft sie schon zusammen saßen.
-* 3 000 Zufallsmischungen, Kosten = Σ (gemeinsame Spiele)² je Paar am Tisch.
-  Die günstigste gewinnt → maximale Durchmischung, trotzdem zufällig.
+* 400 Zufallsstarts + Tausch-Hill-Climbing, Kosten = Σ (gemeinsame Spiele)² je Paar am Tisch.
+  Die günstigste gewinnt → maximale Durchmischung, trotzdem zufällig. (Ab Runde 2 sind bei 12 Spielern
+  mindestens 3 Wiederholungen mathematisch unvermeidbar – der Algorithmus findet dieses Optimum.)
+* **Aus** = purer Zufall.
+
+### 5b. Auto-Tische („rollende Pods“)
+* Sobald 4 Spieler frei sind (ausgeschieden oder Tisch fertig), entsteht automatisch ein neuer **Bar-Tisch**
+  mit nächster Tischnummer – unter dem laufenden Rundentimer.
+* Nie dieselben 4 vom selben Tisch; bei mehr Freien wählt das Matching die frischeste Kombination.
+* Nur wenn noch ≥ 20 min Spielzeit übrig sind (einstellbar). Wer lieber an der Bar bleibt: „Ich mach Pause 🍺“.
+* Host kann jederzeit manuell einen Tisch aus den Freien bilden.
 * Runde 1 ist dadurch reines Los. Der Host sieht „Wiederholungen: 0“ als Qualitätsanzeige.
 
 ## 6. Life Counter (Funktionsumfang nach Lotus / Lifetap / CounterSpell)
@@ -76,7 +90,9 @@ Leben, aber gewertet als Draw).
 |---|---|
 | Startleben 40 | Tap oben/unten ±1, Long-Press ±10 (Auto-Repeat) |
 | Delta-Anzeige | „−7“ bubble, fasst schnelle Taps zusammen |
-| Layout | 2×2 rund um den Tisch, Kacheln zum jeweiligen Spieler gedreht |
+| Layout | 2×2 rund um den Tisch, Kacheln zum jeweiligen Spieler gedreht, **jede Kachel in Spielerfarbe** |
+| K.O.-Animation | Pixel-Totenkopf mit Glitch → Geist steigt auf, Ursache + Verursacher + Spruch („Ab an die Bar 🍺“) |
+| Sieg-Animation | Pixel-Ritter reitet durchs Bild, Pixel-Konfetti, Platz 1–4 mit Sprites |
 | Commander-Schaden | Matrix je Gegner, inkl. Partner (2 Commander), zieht Leben mit ab, 21 = tot |
 | Gift | 10 = tot |
 | Weitere Counter | Energie, Erfahrung, Rad, Commander-Tax (Cast-Zähler) |
@@ -136,21 +152,26 @@ für sein Spiel). Zusätzlich JSON-Backup im Host.
 **Sicherheit (bewusst „casual“):** Code-geschützt, aber kein Bank-Tresor. Für einen privaten
 Spieleabend ausreichend. Upgrade-Pfad: Supabase/Firebase-Adapter (gleiches Datenmodell).
 
-## 9. Design-System
+## 9. Design-System (v2)
 
 | Token | Wert |
 |---|---|
-| `--bg` | `#060c0a` |
-| `--panel` | `#0b1512` |
-| `--fg` (Phosphor) | `#c6f7df` |
-| `--mid` | `#7fb8a0` |
-| `--dim` | `#3e6555` |
-| `--line` | `#2c4a3e` |
-| `--alert` | `#ff6b5b` (K.O./Overtime) |
-| `--gold` | `#ffd479` (Monarch/Sieg) |
-| Fonts | VT323 (Zahlen/Headlines), Share Tech Mono (Text) |
-| Panels | 1px Linien, abgeschrägte Ecken (clip-path), Tab-Notches, Streifen-Muster |
-| Effekte | Scanlines, leichter Glow, Flicker beim Laden, Pixel-Glyphen (Schwert, Stern) |
+| `--bg` | `#0d0d0d` + Punktraster |
+| `--tile` / `--tile2` | `#1a1a1a` / `#262626` |
+| `--paper` (helle Kachel) | `#ececea` mit Tinte `#111` |
+| `--accent` | `#ff6a00` (Orange) |
+| `--alert` | `#ff3b30` (K.O. / Overtime) |
+| `--gold` | `#ffc53d` (Sieg / Monarch) |
+| Spielerfarben | Orange · Blau `#3d8bff` · Grün `#2fd27a` · Pink `#ff4fa3` · Gelb · Violett `#9b6bff` |
+| Fonts | **Doto** (Dot-Matrix, Headlines/Timer), **Inter Tight 800** (Zahlen), **JetBrains Mono** (Labels) |
+| Formen | Kacheln 22 px Radius, Pill-Buttons, Pill-Tabbar, Pixel-Sprites (SVG, crisp) |
+| Bewegung | `steps()`-Animationen (pixelig), Konfetti, Glitch, Reiter-Lauf |
 
-Microcopy im Terminal-Ton: `> SCAN COMPLETE`, `> BATTLEFIELD STATUS: SILENT`,
-`→ CONTINUE RIDING INTO DARK_`.
+Microcopy im Terminal-Ton: `SCAN COMPLETE`, `BATTLEFIELD STATUS: SILENT`, `→ CONTINUE RIDING INTO DARK_`.
+
+## 10. Betrieb
+
+* **Spieler-Link:** https://wildonce.github.io/commander-day/
+* **Host-Link:** https://wildonce.github.io/commander-day/host.html
+* **Installieren:** iPhone → Safari → Teilen → „Zum Home-Bildschirm“ · Android → Chrome → „App installieren“.
+* Code: https://github.com/WildOnce/commander-day · Design: https://www.figma.com/design/3LvXXEOQZPU7Dp0WaUeM3t
