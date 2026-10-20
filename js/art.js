@@ -39,10 +39,6 @@ export function drawArt(canvas, url) {
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = 'color';
-    ctx.fillStyle = '#6fe0a8';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = 'source-over';
     canvas.dataset.drawn = url;
   };
   if (cache.has(url)) return paint(cache.get(url));

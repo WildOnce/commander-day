@@ -183,7 +183,8 @@ function tile(g, i, ctrl, n) {
       <div class="small">${quip}</div></div>`;
   }
   return `<div class="tile n${n} ${s.out ? 'dead' : ''} ${g.monarch === s.pid ? 'mon' : ''}" style="--pc:var(--p${i % 6})">
-    <div class="who" ${ctrl ? `data-act="lc-sheet" data-k="seat" data-i="${i}"` : ''}><b>${esc(p?.name || '?')}</b><span>${esc(s.deckName || '▸ COMMANDER WÄHLEN')}</span></div>
+    <div class="who" ${ctrl ? `data-act="lc-sheet" data-k="seat" data-i="${i}"` : ''}><div class="whorow">${cmdArt(p, s)}
+      <div class="whotext"><b>${esc(p?.name || '?')}</b><span>${esc(s.deckName || '▸ COMMANDER WÄHLEN')}</span></div></div></div>
     ${g.monarch === s.pid ? `<span class="crownb">${sprite('crown', 2)}</span>` : ''}
     ${ctrl && !g.ended ? `<div class="hit minus" data-tap="-1" data-g="${g.id}" data-i="${i}">−</div><div class="hit plus" data-tap="1" data-g="${g.id}" data-i="${i}">+</div>` : ''}
     <div class="life">${s.life}</div>
@@ -192,6 +193,13 @@ function tile(g, i, ctrl, n) {
     ${ctrl || (g.controller === DEVICE && !g.ended) ? `<button class="more" data-act="lc-sheet" data-k="seat" data-i="${i}" aria-label="Details">⋯</button>` : ''}
     ${dead}
   </div>`;
+}
+
+/** Small pixelated commander portrait (Scryfall art), or a pixel sword if the deck has no art. */
+function cmdArt(p, s) {
+  const art = p?.decks?.find((d) => d.id === s.deckId)?.art;
+  return art ? `<canvas class="cmdart" width="24" height="18" data-art="${esc(art)}" aria-hidden="true"></canvas>`
+    : `<span class="cmdart ph">${sprite('sword', 2)}</span>`;
 }
 
 const stepper = (val, attrs) =>
