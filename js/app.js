@@ -1,4 +1,5 @@
-import { A, MODE, store, DEVICE, setRender, render, refresh, go, toast, panel, leader, wubrg, topbar, pname, me, meKey, esc, ls } from './ctx.js';
+import { demoSeed, demoTick, demoPanel, demoBanner, demoRecord, demoRoute, demoActions } from './demo.js';
+import { DEMO, A, MODE, store, DEVICE, setRender, render, refresh, go, toast, panel, leader, wubrg, topbar, pname, me, meKey, esc, ls } from './ctx.js';
 import { AWARD_INFO, DEFAULT_CONFIG, MAX_DECKS, endGame, makeTables, scoreTables, timerInfo, gameId, freePlayers, proposeAutoTable, computeStats } from './logic.js';
 import { lifeView, afterLife, lifeTick, lcActions, initLifeInput, myTable, timerLabel } from './lc.js';
 import { wrappedView, afterWrapped, wrActions } from './wrapped.js';
@@ -19,10 +20,15 @@ async function boot() {
   const code = urlCode || ls.get('cz.code');
   store.addEventListener('change', onChange);
   store.addEventListener('status', () => { if (!isFocused()) render(); });
-  window.addEventListener('hashchange', () => { A.route = location.hash.replace(/^#\/?/, ''); A.ui.sheet = null; render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', () => { A.route = location.hash.replace(/^#\/?/, ''); if (DEMO) demoRoute(A.route); A.ui.sheet = null; render(); window.scrollTo(0, 0); });
   A.route = location.hash.replace(/^#\/?/, '');
   setRender(doRender);
-  if (code) await enter(code, { silent: !urlCode });
+  if (DEMO) {
+    await store.open();
+    demoSeed();
+    A.me = ls.get(meKey());
+    refresh(); render();
+  } else if (code) await enter(code, { silent: !urlCode });
   else render();
   setInterval(tick, 500);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -65,7 +71,7 @@ function doRender() {
   document.body.classList.toggle('lc', !!res.full);
   const oldSheet = document.querySelector('[data-sheet]');
   const sheetPos = oldSheet && { key: oldSheet.dataset.sheet, top: oldSheet.scrollTop };
-  $app.innerHTML = res.html + (res.full || !res.tabs ? '' : tabs()) + assignOverlay();
+  $app.innerHTML = (DEMO && !res.full && A.route !== 'wrapped' ? demoBanner() : '') + res.html + (res.full || !res.tabs ? '' : tabs()) + assignOverlay();
   const newSheet = document.querySelector('[data-sheet]');
   if (newSheet && sheetPos && newSheet.dataset.sheet === sheetPos.key) newSheet.scrollTop = sheetPos.top;
   document.querySelectorAll('canvas[data-art]').forEach((c) => drawArt(c, c.dataset.art));
@@ -159,14 +165,15 @@ function registerView() {
   const s = A.snap;
   const full = s.players.length >= s.config.maxPlayers;
   return { html: `<div class="stack">${topbar('// ' + esc(s.config.name))}
+    ${DEMO ? panel('WILLKOMMEN ZUM TESTSPIEL', `<div class="row" style="gap:14px">${sprite('rider', 3, 'bob')}<div class="small">Hier testest du die App für den Commander-Tag – ganz allein, mit simulierten Mitspielern. <b>Nichts davon zählt</b> und niemand sieht es. Melde dich an, trag einen Commander ein, dann geht's los. Eine Checkliste zeigt dir, was du alles ausprobieren kannst.</div></div>`, { cls: 'acc' }) : ''}
     ${panel('ANMELDUNG', full
       ? `<div class="alert">✕ EVENT VOLL (${s.players.length}/${s.config.maxPlayers}). Sprich mit dem Host.</div>`
       : `<form data-form="register" class="stack"><div class="row" style="gap:12px">${sprite('knight', 4, 'bob')}<div class="small muted">Wie heißt du, Planeswalker?</div></div>
-        <input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="NAME" required><input class="in code" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" placeholder="PIN (4–6 ZIFFERN)" required><div class="tag" style="text-transform:none">Mit Name + PIN kommst du später (auch auf einem anderen Handy) wieder in dein Profil.</div>
+        <input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="NAME" required><input class="in code" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" placeholder="PIN" required><div class="tag" style="text-transform:none">Mit Name + PIN kommst du später (auch auf einem anderen Handy) wieder in dein Profil.</div>
         <button class="btn pri block">→ ANMELDEN</button></form>`, { cls: 'hi', right: `${s.players.length}/${s.config.maxPlayers}` })}
     ${Date.now() < s.config.eventStart ? eventInfoPanel() : ''}
-    ${s.players.length ? panel('SCHON ANGEMELDET? NAME WÄHLEN + PIN', `<div class="row wrap">${s.players.map((p) => `<button class="chip" data-act="claim" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`) : ''}
-    <button class="btn block" data-act="logout">← ANDERER CODE</button></div>` };
+    ${s.players.filter((p) => !p.bot).length ? panel('SCHON ANGEMELDET? NAME WÄHLEN + PIN', `<div class="row wrap">${s.players.filter((p) => !p.bot).map((p) => `<button class="chip" data-act="claim" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`) : ''}
+    ${DEMO ? '' : '<button class="btn block" data-act="logout">← ANDERER CODE</button>'}</div>` };
 }
 
 /* ═════════════════════ player: home ═════════════════════ */
@@ -199,6 +206,7 @@ function homeView() {
   const s = A.snap; const m = me();
   const ref = myTable();
   const out = [topbar(`// ${esc(m.name)} · ${s.live ? 'RUNDE ' + s.live.n : 'STANDBY'}`)];
+  if (DEMO) out.push(demoPanel());
   if (s.config.wrappedAt) out.push(panel('WRAPPED IST DA', `<div class="row" style="gap:14px">${sprite('trophy', 4, 'bob')}<div class="grow"><div class="h2">DEIN TAG IN PIXELN</div><div class="small muted">Awards, Nemesis, Barzeit …</div></div></div>
     <button class="btn pri block" style="margin-top:10px" data-act="wr-open">▶ WRAPPED ÖFFNEN</button>`, { cls: 'hi' }));
   if (!m.decks?.length) out.push(panel('ACHTUNG', `<div class="small">Du hast noch keine Decks hinterlegt.</div><button class="btn block" style="margin-top:8px" data-act="nav" data-to="decks">◎ DECKS EINTRAGEN</button>`, { cls: 'alert' }));
@@ -327,7 +335,7 @@ function decksView() {
     <button class="chip alert" data-act="deck-del" data-id="${x.id}">✕</button></div>`).join('');
   return `<div class="stack">${topbar('// DECK-ARCHIV')}
     ${panel('PROFIL', `<div class="between"><div class="h2">${esc(m.name)}</div><button class="chip" data-act="rename">✎ NAME</button></div>
-      <div class="row" style="margin-top:10px"><button class="chip" data-act="set-pin">⚿ ${m.pinHash ? 'PIN ÄNDERN' : 'PIN FESTLEGEN'}</button><button class="chip" data-act="me-logout">⏻ ABMELDEN</button><button class="chip" data-act="logout">⇄ EVENT WECHSELN</button></div>
+      <div class="row" style="margin-top:10px"><button class="chip" data-act="set-pin">⚿ ${m.pinHash ? 'PIN ÄNDERN' : 'PIN FESTLEGEN'}</button><button class="chip" data-act="me-logout">⏻ ABMELDEN</button>${DEMO ? '' : '<button class="chip" data-act="logout">⇄ EVENT WECHSELN</button>'}</div>
       <div class="tag" style="margin-top:8px">EVENT-CODE: ${esc(store.code)}</div>`)}
     ${panel(`DEINE COMMANDER · ${decks.length}/${MAX_DECKS}`, list || '<div class="dim small">NOCH KEINE DECKS. TRAG UNTEN DEINEN ERSTEN COMMANDER EIN.</div>')}
     ${decks.length < MAX_DECKS || d.editId ? panel(d.editId ? 'DECK BEARBEITEN' : 'DECK HINZUFÜGEN', `<div class="stack">
@@ -443,7 +451,7 @@ function hostJoinView() {
   const s = A.snap;
   return `<div class="stack">${topbar('// HOST · ICH SPIELE MIT')}
     ${panel('SELBST MITSPIELEN', `<div class="row" style="gap:12px">${sprite('knight', 4, 'bob')}<div class="small muted">Als Host kannst du ganz normal mitspielen: eigener Tisch, Life Counter, Decks, Stats & Wrapped.</div></div>
-      <form data-form="register" class="stack" style="margin-top:10px"><input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="DEIN NAME" required><input class="in code" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" placeholder="PIN (4–6 ZIFFERN)" required><div class="tag" style="text-transform:none">Mit Name + PIN kommst du später (auch auf einem anderen Handy) wieder in dein Profil.</div>
+      <form data-form="register" class="stack" style="margin-top:10px"><input class="in code" name="name" maxlength="16" autocomplete="off" placeholder="DEIN NAME" required><input class="in code" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" placeholder="PIN" required><div class="tag" style="text-transform:none">Mit Name + PIN kommst du später (auch auf einem anderen Handy) wieder in dein Profil.</div>
       <button class="btn pri block">+ ALS SPIELER EINTRAGEN</button></form>`, { cls: 'hi' })}
     ${s.players.length ? panel('ODER: DAS BIN ICH', `<div class="row wrap">${s.players.map((p) => `<button class="chip" data-act="claim" data-id="${p.id}">${esc(p.name)}</button>`).join('')}</div>`) : ''}</div>`;
 }
@@ -624,7 +632,7 @@ function tick() {
       render();
     }
   }
-  autoTick();
+  if (DEMO) demoTick(); else autoTick();
 }
 
 function autoTick() {
@@ -656,7 +664,7 @@ const putCfg = (patch) => store.put('config', { ...A.snap.config, ...patch });
 const putRound = (r) => store.put('round/' + r.id, { ...r, tables: r.tables.filter((t) => !t._x) });
 
 const actions = {
-  ...lcActions, ...wrActions,
+  ...lcActions, ...wrActions, ...demoActions,
   nav(el) { A.ui.sheet = null; go(el.dataset.to); },
   logout() {
     if (!confirm('Abmelden?')) return;
@@ -868,6 +876,7 @@ document.addEventListener('click', (e) => {
   if (!el || !actions[el.dataset.act]) return;
   if (el.tagName === 'A' || el.tagName === 'BUTTON') e.preventDefault();
   actions[el.dataset.act](el, e);
+  if (DEMO) demoRecord(el);
 });
 document.addEventListener('change', (e) => {
   const el = e.target;
