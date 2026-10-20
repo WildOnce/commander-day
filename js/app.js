@@ -89,7 +89,11 @@ async function wake(on) {
     if (!on && wl) { wl.release(); wl = null; }
   } catch {}
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('lc')) wake(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') store.flush?.(); // app backgrounded / closed / reloaded: nothing pending may get lost
+  if (document.visibilityState === 'visible' && document.body.classList.contains('lc')) wake(true);
+});
+window.addEventListener('pagehide', () => store.flush?.());
 
 function view() {
   if (!store.prefix || A.ui.login) return loginView();

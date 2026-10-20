@@ -111,6 +111,17 @@ export class Store extends EventTarget {
     else send();
   }
 
+  /** Send every throttled write right now and persist the cache (page is being hidden/closed/reloaded). */
+  flush() {
+    for (const key of [...this.timers.keys()]) {
+      clearTimeout(this.timers.get(key));
+      this.timers.delete(key);
+      const r = this.e.get(key);
+      this.clients.forEach((c) => c?.publish(this.prefix + key, JSON.stringify(r), { qos: 1, retain: true }));
+    }
+    if (this.cacheKey) ls.set(this.cacheKey, Object.fromEntries(this.e));
+  }
+
   del(key) { this.put(key, null, { deleted: true }); }
 
   get(key) { const r = this.e.get(key); return r && !r.d ? r.v : null; }

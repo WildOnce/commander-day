@@ -29,6 +29,7 @@ export class DemoStore extends EventTarget {
     this.dirty(key);
   }
 
+  flush() { ls.set(KEY, Object.fromEntries(this.e)); }
   del(key) { this.put(key, null, { deleted: true }); }
   get(key) { const r = this.e.get(key); return r && !r.d ? r.v : null; }
 
