@@ -68,6 +68,9 @@ Ein Push darf **niemals** Spielstände, Runden, Timer oder Spieler verändern. D
 | Life Counter gesperrt | Host hat Timer nicht gestartet / pausiert → Host: RUNDE → ▶ |
 | Spieler vergisst PIN | Host → SPIELER → ⚿ (PIN zurücksetzen) |
 | Falscher K.O. | ⋯ → Wiederbeleben, oder ↶ Rückgängig |
+| Spieler gemillt / Self-Mill | ⋯ → „GEMILLT“ → wer war's / SELF-MILL (zählt wie K.O. für Platz, Punkte, Kills) |
+| Sitzplätze falsch | Namen auf andere Kachel ziehen, oder ⋯ → „PLATZ TAUSCHEN MIT“ (↶ macht es rückgängig) |
+| Auto-Tische an/aus | Host → RUNDE oder SETUP → Toggle „AUTO-TISCHE“ (Standard für neue Events: AUS) |
 | Falsche Auslosung | vor Veröffentlichen: ↻ NEU / Spieler antippen = tauschen |
 | Handy zeigt alte Version | App schließen & neu öffnen; notfalls Safari-Website-Daten löschen |
 | Sync „LOST“ | WLAN/Mobilfunk prüfen; Daten sind lokal gecacht und heilen sich beim Reconnect |
