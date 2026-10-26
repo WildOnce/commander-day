@@ -65,6 +65,7 @@ document.addEventListener('focusout', () => setTimeout(() => { if (A.pending && 
 /* ═════════════════════ render ═════════════════════ */
 
 function doRender() {
+  if (A.drag?.on && Date.now() - A.drag.t < 15000) return; // never swap the DOM under a finger that is dragging a seat; drop re-renders
   if (store.prefix) refresh();
   const v = view();
   const res = typeof v === 'string' ? { html: v } : v;

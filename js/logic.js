@@ -294,7 +294,7 @@ export function computeStats(snap) {
     pid: p.id, name: p.name, games: 0, finished: 0, wins: 0, draws: 0, points: 0, placeSum: 0,
     outs: 0, fastestOut: null, fastestWin: null, kills: 0, killedBy: {}, victims: {},
     inGame: 0, bar: 0, cmdDealt: 0, poison: 0, maxLife: 0, minLife: 999, comeback: 0,
-    decks: {}, lifeLost: 0, lifeGained: 0, taps: 0,
+    decks: {}, lifeLost: 0, lifeGained: 0, taps: 0, mills: 0, milled: 0,
   };
   const cmdrs = {};
   for (const g of games) {
@@ -315,6 +315,7 @@ export function computeStats(snap) {
         const t = s.out.at - start;
         if (t > 0 && (p.fastestOut == null || t < p.fastestOut)) p.fastestOut = t;
         p.bar += Math.max(0, (endAt || now) - s.out.at);
+        if (s.out.cause === 'mill') { p.milled++; if (s.out.by && st[s.out.by] && s.out.by !== s.pid) st[s.out.by].mills++; }
         if (s.out.by && st[s.out.by] && s.out.by !== s.pid) {
           st[s.out.by].kills++;
           p.killedBy[s.out.by] = (p.killedBy[s.out.by] || 0) + 1;
@@ -378,7 +379,8 @@ export const AWARD_INFO = [
   { key: 'fastout', sprite: 'skull', title: 'SPEEDRUN ZUM TRESEN', desc: 'Wer am schnellsten nach Rundenstart ausgeschieden ist. Mehr Zeit für Bier & Dart.' },
   { key: 'roach', sprite: 'knight', title: 'DAUERBRENNER', desc: 'Am längsten im Spiel geblieben – Summe der Spielzeit über alle Runden, bis man raus war oder die Runde endete.' },
   { key: 'bar', sprite: 'beer', title: 'STAMMGAST', desc: 'Am meisten Zeit an der Bar – Summe der Zeit zwischen eigenem K.O. und Rundenende.' },
-  { key: 'kills', sprite: 'crosshair', title: 'KOPFGELDJÄGER', desc: 'Hat die meisten Mitspieler rausgehauen (zählt bei „Wer war’s?“ bzw. tödlichem Commander-Schaden).' },
+  { key: 'kills', sprite: 'crosshair', title: 'KOPFGELDJÄGER', desc: 'Hat die meisten Mitspieler rausgehauen (zählt bei „Wer war’s?“, Mill bzw. tödlichem Commander-Schaden).' },
+  { key: 'mill', sprite: 'ghost', title: 'BÜCHERVERBRENNER', desc: 'Hat die meisten Mitspieler gemillt (Bibliothek leer → K.O.).' },
   { key: 'cmd', sprite: 'axe', title: 'COMMANDER-SCHLÄCHTER', desc: 'Hat mit dem eigenen Commander den meisten Commander-Schaden verteilt.' },
   { key: 'poison', sprite: 'potion', title: 'GIFTSCHLUCKER', desc: 'Hat insgesamt die meisten Giftmarker abbekommen.' },
   { key: 'life', sprite: 'heart', title: 'LEBENSKÜNSTLER', desc: 'Höchster Lebensstand des Tages (über 40).' },
@@ -406,6 +408,8 @@ function awards(list, commanders, P) {
   add('bar', 'beer', 'STAMMGAST', 'Der Tresen kennt deinen Namen.', bar, bar && hours(bar.bar));
   const k = maxBy(played, (p) => p.kills);
   add('kills', 'crosshair', 'KOPFGELDJÄGER', 'Niemand ist sicher.', k, k && `${k.kills} K.O.`);
+  const mi = maxBy(played, (p) => p.mills);
+  add('mill', 'ghost', 'BÜCHERVERBRENNER', 'Wer nicht zieht, verliert.', mi, mi && `${mi.mills}× GEMILLT`);
   const cd = maxBy(played, (p) => p.cmdDealt);
   add('cmd', 'axe', 'COMMANDER-SCHLÄCHTER', '21 ist nur eine Zahl.', cd, cd && `${cd.cmdDealt} SCHADEN`);
   const po = maxBy(played, (p) => p.poison);

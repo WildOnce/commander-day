@@ -291,3 +291,8 @@ body.lc .tabs { display: none; }
   body:not(.lc) .rotate-hint .ph { font-size: 44px; animation: tilt 1.6s steps(4) infinite; }
 }
 @keyframes tilt { 0%, 40% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0deg); } }
+/* seat drag & drop */
+.tile[data-seat] .who { touch-action: none; cursor: grab; }
+.tile.dragsrc { opacity: .45; }
+.tile.droptgt { outline: 4px dashed #fff; outline-offset: -8px; }
+.seatghost { position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none; background: var(--paper, #fff); color: var(--ink, #111); font-weight: 800; text-transform: uppercase; padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 24px rgba(0, 0, 0, .5); white-space: nowrap; }

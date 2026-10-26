@@ -9,7 +9,8 @@ const QUIPS = [
   'AB AN DIE BAR 🍺', 'DART WARTET 🎯', 'NO RECORD OF RETURN FOUND', 'ASH // RESIDUAL MATTER', 'SIGNAL LOST',
   'RESPAWN IN DER NÄCHSTEN RUNDE', 'DAS DECK WAR SCHULD', 'GG. WIRKLICH.', 'LEAVE THE FALLEN, RIDE ON', 'MULLIGAN INS JENSEITS',
 ];
-const CAUSE = { life: 'LEBEN AUF 0', poison: 'VERGIFTET', cmd: 'COMMANDER-SCHADEN', concede: 'AUFGEGEBEN', manual: 'K.O.' };
+const CAUSE = { life: 'LEBEN AUF 0', poison: 'VERGIFTET', cmd: 'COMMANDER-SCHADEN', concede: 'AUFGEGEBEN', manual: 'K.O.', mill: 'GEMILLT' };
+const causeTxt = (c, by) => (c === 'mill' && !by ? 'SELF-MILL' : CAUSE[c] || c || 'K.O.');
 
 const backTo = () => (A.route.startsWith('game/') ? (MODE === 'host' ? 'live' : 'home') : MODE === 'host' ? 'me' : 'home');
 
@@ -96,6 +97,59 @@ export function initLifeInput() {
   window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', () => { if (A.hold) { clearTimeout(A.hold.t); A.hold = null; } });
   document.addEventListener('contextmenu', (e) => { if (e.target.closest('.lcw')) e.preventDefault(); });
+
+  // Seats: drag a player's name onto another tile to swap places.
+  const tileAt = (x, y) => document.elementFromPoint(x, y)?.closest('.tile[data-seat]');
+  document.addEventListener('pointerdown', (e) => {
+    const w = e.target.closest('.tile[data-seat] .who, .tile[data-seat] .deadfx');
+    A.drag?.ghost?.remove();
+    A.drag = null;
+    if (!w) return;
+    const t = w.closest('.tile');
+    A.drag = { gid: t.dataset.g, i: +t.dataset.seat, x: e.clientX, y: e.clientY, t: Date.now(), on: false, name: t.querySelector('.who b')?.textContent || '' };
+  });
+  window.addEventListener('pointermove', (e) => {
+    const d = A.drag; if (!d) return;
+    if (!d.on) {
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 14) return;
+      d.on = true; buzz(15);
+      d.ghost = Object.assign(document.createElement('div'), { className: 'seatghost', textContent: '⇄ ' + d.name });
+      document.body.appendChild(d.ghost);
+      document.querySelector(`.tile[data-seat="${d.i}"]`)?.classList.add('dragsrc');
+    }
+    e.preventDefault();
+    d.ghost.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -130%)`;
+    const t = tileAt(e.clientX, e.clientY);
+    document.querySelectorAll('.tile.droptgt').forEach((x) => x !== t && x.classList.remove('droptgt'));
+    if (t && +t.dataset.seat !== d.i) t.classList.add('droptgt');
+  }, { passive: false });
+  const drop = (e, ok) => {
+    const d = A.drag; if (!d) return;
+    A.drag = null;
+    if (!d.on) return;
+    d.ghost.remove();
+    A.dragEnd = Date.now(); // swallow the click that follows the drop
+    const t = ok && tileAt(e.clientX, e.clientY);
+    if (t && t.dataset.g === d.gid && +t.dataset.seat !== d.i) swapSeats(d.gid, d.i, +t.dataset.seat);
+    else render();
+  };
+  window.addEventListener('pointerup', (e) => drop(e, true));
+  window.addEventListener('pointercancel', (e) => drop(e, false));
+  document.addEventListener('click', (e) => { if (Date.now() - (A.dragEnd || 0) < 400) { e.stopPropagation(); e.preventDefault(); } }, true);
+}
+
+/** Swap two players' places at the table. Each keeps their colour (s.c) and all counters. */
+function swapSeats(gid, a, b) {
+  const g = store.get('game/' + gid);
+  if (!g || g.controller !== DEVICE || g.ended || a === b || !g.seats[a] || !g.seats[b]) return render();
+  mutate(gid, (x) => {
+    x.seats.forEach((s, i) => { if (s.c == null) s.c = i; });
+    [x.seats[a], x.seats[b]] = [x.seats[b], x.seats[a]];
+  }, { debounce: 0 });
+  for (const k in A.delta) if (k.startsWith(gid + ':')) delete A.delta[k];
+  A.ui.sheet = null;
+  buzz([20, 30, 20]);
+  render();
 }
 
 /* ───────────── views ───────────── */
@@ -179,10 +233,11 @@ function tile(g, i, ctrl, n) {
     dead = `<div class="deadfx" ${ctrl ? `data-act="lc-sheet" data-k="seat" data-i="${i}"` : ''}>
       <div class="${recent ? 'pop' : 'rise'}">${sprite(recent ? 'skull' : 'ghost', n > 4 ? 4 : 6, recent ? 'glitch' : '')}</div>
       <div class="ko ${recent ? 'glitch' : ''}">K.O.</div><div class="nm">${esc(p?.name || '')}</div>
-      <div class="tag" style="color:var(--alert)">${CAUSE[s.out.cause] || 'K.O.'}${s.out.by ? ' · BY ' + esc(pname(s.out.by)) : ''}${place ? ` · PLATZ ${place}` : ''}</div>
+      <div class="tag" style="color:var(--alert)">${causeTxt(s.out.cause, s.out.by)}${s.out.by ? ' · BY ' + esc(pname(s.out.by)) : ''}${place ? ` · PLATZ ${place}` : ''}</div>
       <div class="small">${quip}</div></div>`;
   }
-  return `<div class="tile n${n} ${s.out ? 'dead' : ''} ${g.monarch === s.pid ? 'mon' : ''}" style="--pc:var(--p${i % 6})">
+  const seatable = g.controller === DEVICE && !g.ended;
+  return `<div class="tile n${n} ${s.out ? 'dead' : ''} ${g.monarch === s.pid ? 'mon' : ''}" style="--pc:var(--p${(s.c ?? i) % 6})"${seatable ? ` data-seat="${i}" data-g="${g.id}"` : ''}>
     <div class="who" ${ctrl ? `data-act="lc-sheet" data-k="seat" data-i="${i}"` : ''}><div class="whorow">${cmdArt(p, s)}
       <div class="whotext"><b>${esc(p?.name || '?')}</b><span>${esc(s.deckName || '▸ COMMANDER WÄHLEN')}</span></div></div></div>
     ${g.monarch === s.pid ? `<span class="crownb">${sprite('crown', 2)}</span>` : ''}
@@ -240,16 +295,19 @@ function sheetHtml(g, ref, ctrl, nTop) {
         <button class="chip ${g.monarch === s.pid ? 'gold' : ''}" data-act="lc-mon" data-i="${sh.i}" style="justify-content:center;min-height:38px">👑 MONARCH</button>
         <button class="chip ${g.initiative === s.pid ? 'gold' : ''}" data-act="lc-init" data-i="${sh.i}" style="justify-content:center;min-height:38px">⇡ INITIATIVE</button>
       </div>
+      ${!g.ended ? `<div class="tag" style="margin:12px 0 6px">PLATZ TAUSCHEN MIT · ODER NAMEN ZIEHEN</div>
+      <div class="row wrap">${g.seats.map((o, j) => j === sh.i ? '' : `<button class="chip" data-act="lc-swap" data-i="${sh.i}" data-j="${j}">⇄ ${esc(pname(o.pid))}</button>`).join('')}</div>` : ''}
       <div style="margin-top:12px">${s.out
         ? `<button class="btn block" data-act="lc-revive" data-i="${sh.i}">✚ WIEDERBELEBEN</button>`
-        : `<button class="btn warn block" data-act="lc-sheet" data-k="ko" data-i="${sh.i}">✕ K.O. / AUFGEBEN</button>`}</div>`;
-  } else if (sh.type === 'who' || sh.type === 'ko') {
+        : `<div class="stack"><button class="btn warn block" data-act="lc-sheet" data-k="ko" data-i="${sh.i}">✕ K.O. / AUFGEBEN</button><button class="btn warn block" data-act="lc-sheet" data-k="mill" data-i="${sh.i}">▤ GEMILLT (BIBLIOTHEK LEER)</button></div>`}</div>`;
+  } else if (sh.type === 'who' || sh.type === 'ko' || sh.type === 'mill') {
     const s = g.seats[sh.i];
     const others = g.seats.filter((o) => o.pid !== s.pid);
-    body = `<div class="between"><div class="h2">${sh.type === 'ko' ? 'K.O. MELDEN' : 'K.O.!'}</div>${close}</div>
-      <div class="row" style="gap:12px;margin:10px 0">${sprite('skull', 5, 'glitch')}<div><div class="h2 alert">${esc(pname(s.pid))}</div><div class="tag">WER WAR'S?</div></div></div>
-      <div class="stack">${others.map((o) => `<button class="btn block" data-act="lc-who" data-i="${sh.i}" data-by="${o.pid}" data-m="${sh.type === 'ko' ? 1 : 0}">${esc(pname(o.pid))}</button>`).join('')}
-      <button class="btn block" data-act="lc-who" data-i="${sh.i}" data-by="" data-m="${sh.type === 'ko' ? 1 : 0}">${sh.type === 'ko' ? 'AUFGEGEBEN / NIEMAND' : 'NIEMAND / SELBST'}</button></div>`;
+    const mill = sh.type === 'mill'; const m = sh.type === 'who' ? 0 : 1;
+    body = `<div class="between"><div class="h2">${mill ? 'GEMILLT MELDEN' : sh.type === 'ko' ? 'K.O. MELDEN' : 'K.O.!'}</div>${close}</div>
+      <div class="row" style="gap:12px;margin:10px 0">${sprite('skull', 5, 'glitch')}<div><div class="h2 alert">${esc(pname(s.pid))}</div><div class="tag">${mill ? 'WER HAT GEMILLT?' : "WER WAR'S?"}</div></div></div>
+      <div class="stack">${others.map((o) => `<button class="btn block" data-act="lc-who" data-i="${sh.i}" data-by="${o.pid}" data-m="${m}"${mill ? ' data-c="mill"' : ''}>${esc(pname(o.pid))}</button>`).join('')}
+      <button class="btn block" data-act="lc-who" data-i="${sh.i}" data-by="" data-m="${m}"${mill ? ' data-c="mill"' : ''}>${mill ? 'SELF-MILL / NIEMAND' : sh.type === 'ko' ? 'AUFGEGEBEN / NIEMAND' : 'NIEMAND / SELBST'}</button></div>`;
   } else if (sh.type === 'menu') {
     body = `<div class="between"><div class="h2">MENÜ</div>${close}</div>
       <div class="tag" style="margin:10px 0 6px">WÜRFEL & CO.</div>
@@ -268,7 +326,7 @@ function sheetHtml(g, ref, ctrl, nTop) {
       const t = clock(e.t - start);
       if (e.k === 'life') return `<div>${t} · ${esc(pname(e.pid))} <span class="${e.d < 0 ? 'alert' : ''}">${e.d > 0 ? '+' : ''}${e.d}</span></div>`;
       if (e.k === 'cmd') return `<div>${t} · ${esc(pname(e.pid))} ⚔ ${e.d > 0 ? '+' : ''}${e.d} von ${esc(pname(e.from))}</div>`;
-      if (e.k === 'out') return `<div class="alert">${t} · ${esc(pname(e.pid))} K.O. (${CAUSE[e.cause] || e.cause})</div>`;
+      if (e.k === 'out') return `<div class="alert">${t} · ${esc(pname(e.pid))} K.O. (${causeTxt(e.cause, e.by)})</div>`;
       if (e.k === 'revive') return `<div>${t} · ${esc(pname(e.pid))} ✚ zurück</div>`;
       if (e.k === 'end') return `<div class="gold">${t} · SPIELENDE</div>`;
       return `<div>${t} · ${esc(pname(e.pid))} ${esc(e.k)} ${e.d ?? ''}</div>`;
@@ -386,15 +444,17 @@ export const lcActions = {
     }, { debounce: 0 });
   },
   'lc-mon'(el) { mutate(gidNow(), (g) => { const pid = g.seats[+el.dataset.i].pid; g.monarch = g.monarch === pid ? null : pid; }); },
+  'lc-swap'(el) { swapSeats(gidNow(), +el.dataset.i, +el.dataset.j); },
   'lc-init'(el) { mutate(gidNow(), (g) => { const pid = g.seats[+el.dataset.i].pid; g.initiative = g.initiative === pid ? null : pid; }); },
   'lc-who'(el) {
-    const i = +el.dataset.i; const by = el.dataset.by || null; const manual = el.dataset.m === '1';
+    const i = +el.dataset.i; const by = el.dataset.by || null; const manual = el.dataset.m === '1'; const mill = el.dataset.c === 'mill';
     mutate(gidNow(), (g) => {
       const s = g.seats[i];
       if (manual && !s.out) {
-        s.out = { at: Date.now(), cause: by ? 'manual' : 'concede', by, auto: false };
+        s.out = { at: Date.now(), cause: mill ? 'mill' : by ? 'manual' : 'concede', by, auto: false };
         g.log.push({ t: Date.now(), pid: s.pid, k: 'out', cause: s.out.cause, by });
         if (g.monarch === s.pid) g.monarch = null;
+        if (g.initiative === s.pid) g.initiative = null;
       } else if (s.out) s.out.by = by;
     }, { debounce: 0 });
     A.ui.sheet = null;
