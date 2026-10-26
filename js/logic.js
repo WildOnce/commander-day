@@ -3,7 +3,7 @@ import { shuffle, uid } from './util.js';
 
 export const DEFAULT_CONFIG = {
   name: 'COMMANDER DAY', playMin: 80, otMin: 10, tableSize: 4, maxPlayers: 12,
-  smart: true, autoTables: true, autoMinLeft: 20, wrappedAt: null,
+  smart: true, autoTables: false, autoMinLeft: 20, wrappedAt: null,
   // 31.10.2026 12:00 Europe/Berlin (CET, UTC+1)
   eventStart: Date.UTC(2026, 9, 31, 11, 0, 0), eventDate: 'Samstag, 31.10.2026', eventPlace: 'Ranch 58', eventTime: 'Ab ca. 12 Uhr – Open End',
 };

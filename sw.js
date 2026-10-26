@@ -1,6 +1,6 @@
 // Network-first service worker: always fresh when online, works offline from cache.
-const CACHE = 'cz-v21';
-const SHELL = ['./', './index.html', './host.html', './css/style.css?v=21', './js/app.js?v=21', './js/ctx.js', './js/sync.js', './js/util.js',
+const CACHE = 'cz-v22';
+const SHELL = ['./', './index.html', './host.html', './css/style.css?v=22', './js/app.js?v=22', './js/ctx.js', './js/sync.js', './js/util.js',
   './js/logic.js', './js/lc.js', './js/wrapped.js', './js/sprites.js', './js/art.js', './js/demo.js', './js/demo-store.js', './vendor/mqtt.min.js', './vendor/qrcode.js',
   './manifest.webmanifest', './manifest-host.webmanifest', './icons/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
