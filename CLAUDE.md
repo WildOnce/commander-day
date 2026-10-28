@@ -4,7 +4,7 @@ Kevins App für den Commander-Tag am **Sa 31.10.2026, Ranch 58, ab 12 Uhr**. Liv
 Vor Ort zählt: **schnell, klein, sicher fixen** – nie das laufende Event gefährden.
 
 ## Links
-- Spieler: https://wildonce.github.io/commander-day/  · Host: …/host.html  · Testspiel: …/?demo
+- Spieler: https://wildonce.github.io/commander-day/  · Host: …/host.html  · TV: …/tv.html?c=CODE  · Testspiel: …/?demo
 - Echtes Event-Code: `ZONE-4040` · Test-Event: `TEST-4040` (Host-PIN der Test-Instanz: 1234, Demo-Spieler-PIN 0000)
 - Host-PIN des echten Events kennt Kevin – **nie** ins Repo schreiben (Repo ist öffentlich).
 
@@ -18,6 +18,7 @@ Vor Ort zählt: **schnell, klein, sicher fixen** – nie das laufende Event gef�
 | `js/demo.js`, `js/demo-store.js` | Testspiel `?demo`: Offline-Store, Bots, Testmission |
 | `js/wrapped.js`, `js/sprites.js`, `js/art.js` | Wrapped-Slides, Pixel-Sprites, Scryfall + Pixel-Commander-Art |
 | `css/style.css` | Design v2 (Pixel-Widgets, Spielerfarben `--p0..5`, Querformat-Regeln am Ende) |
+| `tv.html` | TV-Dashboard (`MODE === 'tv'`, `tvView()` in app.js): nur lesen, 960×540-Layout per zoom skaliert |
 | `sw.js` | Service Worker, network-first, Cache-Name `cz-vN` |
 
 Datenmodell (Topic = `czday/<sha256("czday-v1:"+CODE)[:32]>/<key>`):

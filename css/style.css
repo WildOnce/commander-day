@@ -296,3 +296,16 @@ body.lc .tabs { display: none; }
 .tile.dragsrc { opacity: .45; }
 .tile.droptgt { outline: 4px dashed #fff; outline-offset: -8px; }
 .seatghost { position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none; background: var(--paper, #fff); color: var(--ink, #111); font-weight: 800; text-transform: uppercase; padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 24px rgba(0, 0, 0, .5); white-space: nowrap; }
+/* tv.html: big-screen dashboard, laid out at 960x540 and zoomed to fit the TV (see boot) */
+body.tv { overflow: hidden; background-image: none; }
+body.tv #app { max-width: none; padding: 0; }
+.tvw { display: grid; grid-template-columns: 1fr 1.7fr 1fr; gap: 12px; padding: 12px; width: 960px; height: 540px; box-sizing: border-box; }
+.tvcol { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden; }
+.tvtables { display: grid; grid-template-columns: 1fr 1fr; align-content: start; }
+.tvtables .row > b + .tag { display: none; }
+.tvw .panel { margin: 0; }
+.tvw .big { font-size: 64px; line-height: 1; }
+.tvw .qr svg { width: 84px; height: 84px; background: #fff; padding: 4px; }
+.tvw .big + .tag { display: none; }
+.tvw .qr + div { min-width: 0; }
+.tvw .qr + div .h2 { font-size: 17px; overflow-wrap: anywhere; }

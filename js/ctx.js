@@ -4,7 +4,7 @@ import { DemoStore } from './demo-store.js';
 import { esc, ls } from './util.js';
 import { snapshot } from './logic.js';
 
-export const MODE = document.body.dataset.mode === 'host' ? 'host' : 'player';
+export const MODE = ['host', 'tv'].includes(document.body.dataset.mode) ? document.body.dataset.mode : 'player';
 // ?demo → self-contained offline test game with simulated players
 export const DEMO = new URLSearchParams(location.search).has('demo') && document.body.dataset.mode !== 'host';
 export const store = DEMO ? new DemoStore() : new Store();

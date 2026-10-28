@@ -23,6 +23,11 @@ async function boot() {
   window.addEventListener('hashchange', () => { A.route = location.hash.replace(/^#\/?/, ''); if (DEMO) demoRoute(A.route); A.ui.sheet = null; render(); window.scrollTo(0, 0); });
   A.route = location.hash.replace(/^#\/?/, '');
   setRender(doRender);
+  if (MODE === 'tv') { // TV: refresh 'vor x min', keep screen on, scale the 960x540 layout to the screen
+    setInterval(render, 30000); wake(true);
+    const fit = () => { document.body.style.zoom = Math.min(innerWidth / 960, innerHeight / 540); };
+    fit(); window.addEventListener('resize', fit);
+  }
   if (DEMO) {
     await store.open();
     demoSeed();
@@ -40,7 +45,7 @@ async function enter(code, { silent = false } = {}) {
   await store.open(code);
   const cfg = await store.waitFor('config', silent ? 1500 : 7000);
   refresh();
-  if (!cfg && MODE === 'player' && !silent) {
+  if (!cfg && MODE !== 'host' && !silent) {
     store.close(); store.prefix = null;
     A.ui.login = { err: 'CODE UNBEKANNT · KEIN EVENT GEFUNDEN', code };
     return render();
@@ -112,6 +117,7 @@ function view() {
     const v = { round: hostRound, players: hostPlayers, live: liveView, setup: hostSetup, stats: statsView }[r] || hostRound;
     return { html: v(), tabs: true };
   }
+  if (MODE === 'tv') return { html: tvView(), full: true };
   if (!me()) return registerView();
   const r = A.route || 'home';
   if (r === 'life' || r.startsWith('game/')) return lifeView();
@@ -533,18 +539,7 @@ function liveView() {
   if (s.live) {
     out.push(panel(`RUNDE ${s.live.n} · TIMER`, timerBlock(s.live), { cls: 'hi' }));
     for (const t of s.live.tables) {
-      const gid = gameId(s.live, t);
-      const g = s.G[gid];
-      const rows = t.players.map((pid, i) => {
-        const seat = g?.seats.find((x) => x.pid === pid);
-        const pl = g?.ended?.placements.find((x) => x.pid === pid);
-        const right = pl ? `<span class="${pl.place === 1 ? 'gold' : seat?.out ? 'alert' : ''}">${pl.place}.${pl.draw ? ' ½' : ''}</span>` : seat?.out ? '<span class="alert">K.O.</span>' : seat ? `<span class="num" style="font-size:22px">${seat.life}</span>` : '<span class="dim">—</span>';
-        const extra = seat ? [Math.max(0, ...Object.values(seat.cmd).flat()) ? `⚔${Math.max(...Object.values(seat.cmd).flat())}` : '', seat.poison ? `☠${seat.poison}` : '', g.monarch === pid ? '👑' : ''].filter(Boolean).join(' ') : '';
-        return `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><div class="between"><span class="row" style="gap:8px;min-width:0"><i style="width:10px;height:10px;border-radius:50%;background:var(--p${i % 6});flex:none"></i>
-          <b class="up" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(pname(pid))}</b><span class="tag">${esc(seat?.deckName || '')}</span></span><span class="row">${extra ? `<span class="tag">${extra}</span>` : ''}${right}</span></div>
-          ${seat && !seat.out && !g.ended ? lifeBar(seat.life) : ''}</div>`;
-      }).join('');
-      const st = !g ? '<span class="chip off">NICHT GESTARTET</span>' : g.ended ? '<span class="chip gold">BEENDET</span>' : '<span class="chip acc">LIVE</span>';
+      const { gid, g, rows, st } = tableInfo(s, t);
       out.push(panel(`TISCH ${t.no}${t.auto ? ' · BAR-TISCH' : ''}`, `${rows}${g ? `<button class="btn sm block" style="margin-top:10px" data-act="nav" data-to="game/${gid}">${MODE === 'host' ? '♥ COUNTER ÖFFNEN' : '◉ LIVE ZUSCHAUEN'}</button>` : ''}`, { right: st }));
     }
   } else out.push(panel('LIVE', '<div class="dim">KEINE LAUFENDE RUNDE.</div>'));
@@ -562,6 +557,42 @@ function liveView() {
     out.push(panel(`RUNDE ${r.n} · ERGEBNISSE`, res));
   }
   return `<div class="stack">${out.join('')}</div>`;
+}
+
+/** One table of the live round: player rows (life, counters, placement) and a status chip. */
+function tableInfo(s, t) {
+      const gid = gameId(s.live, t);
+      const g = s.G[gid];
+      const rows = t.players.map((pid, i) => {
+        const seat = g?.seats.find((x) => x.pid === pid);
+        const pl = g?.ended?.placements.find((x) => x.pid === pid);
+        const right = pl ? `<span class="${pl.place === 1 ? 'gold' : seat?.out ? 'alert' : ''}">${pl.place}.${pl.draw ? ' ½' : ''}</span>` : seat?.out ? '<span class="alert">K.O.</span>' : seat ? `<span class="num" style="font-size:22px">${seat.life}</span>` : '<span class="dim">—</span>';
+        const extra = seat ? [Math.max(0, ...Object.values(seat.cmd).flat()) ? `⚔${Math.max(...Object.values(seat.cmd).flat())}` : '', seat.poison ? `☠${seat.poison}` : '', g.monarch === pid ? '👑' : ''].filter(Boolean).join(' ') : '';
+        return `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><div class="between"><span class="row" style="gap:8px;min-width:0"><i style="width:10px;height:10px;border-radius:50%;background:var(--p${i % 6});flex:none"></i>
+          <b class="up" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(pname(pid))}</b><span class="tag">${esc(seat?.deckName || '')}</span></span><span class="row">${extra ? `<span class="tag">${extra}</span>` : ''}${right}</span></div>
+          ${seat && !seat.out && !g.ended ? lifeBar(seat.life) : ''}</div>`;
+      }).join('');
+      const st = !g ? '<span class="chip off">NICHT GESTARTET</span>' : g.ended ? '<span class="chip gold">BEENDET</span>' : '<span class="chip acc">LIVE</span>';
+      return { gid, g, rows, st };
+}
+
+/** tv.html: read-only big-screen dashboard (timer, tables, ticker, leaderboard). Never writes. */
+function tvView() {
+  const s = A.snap;
+  const S = computeStats(s);
+  const r = s.live;
+  const join = `${new URL('./', location.href).href}?c=${encodeURIComponent(store.code)}`;
+  const left = r
+    ? panel(`RUNDE ${r.n}`, timerBlock(r), { cls: 'hi' })
+    : panel(s.config.name, `<div class="h2">${s.rounds.length ? 'PAUSE · GLEICH GEHT’S WEITER' : 'GLEICH GEHT’S LOS'}</div><div class="small muted">${esc(s.config.eventPlace || '')}</div>`, { cls: 'hi' });
+  const lb = S.leaderboard.filter((p) => p.games).slice(0, 6);
+  const tables = r ? r.tables.map((t) => { const { rows, st } = tableInfo(s, t); return panel(`TISCH ${t.no}${t.auto ? ' · BAR' : ''}`, rows, { right: st }); }).join('')
+    : panel('TISCHE', '<div class="dim">NOCH KEINE RUNDE AUSGELOST.</div>');
+  return `<div class="tvw">
+    <div class="tvcol">${left}${panel('MITMACHEN', `<div class="row" style="gap:14px"><div class="qr" data-qr="${esc(join)}"></div><div><div class="tag">EVENT-CODE</div><div class="h2">${esc(store.code)}</div><div class="small muted">${s.players.length} SPIELER</div></div></div>`)}
+      ${lb.length ? panel('LEADERBOARD', lb.map((p, i) => leader(`${String(i + 1).padStart(2, '0')}  ${p.name}`, `${p.wins}W · ${p.points} PTS`, i === 0 ? 'gold' : '')).join('')) : ''}</div>
+    <div class="tvcol tvtables">${tables}</div>
+    <div class="tvcol">${feedPanel()}</div></div>`;
 }
 
 const localDT = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
