@@ -296,16 +296,26 @@ body.lc .tabs { display: none; }
 .tile.dragsrc { opacity: .45; }
 .tile.droptgt { outline: 4px dashed #fff; outline-offset: -8px; }
 .seatghost { position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none; background: var(--paper, #fff); color: var(--ink, #111); font-weight: 800; text-transform: uppercase; padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 24px rgba(0, 0, 0, .5); white-space: nowrap; }
-/* tv.html: big-screen dashboard, laid out at 960x540 and zoomed to fit the TV (see boot) */
+/* tv.html: big-screen dashboard, laid out at 960x540 and zoomed to fit the TV (see boot); every column fills the full height */
 body.tv { overflow: hidden; background-image: none; }
 body.tv #app { max-width: none; padding: 0; }
-.tvw { display: grid; grid-template-columns: 1fr 1.7fr 1fr; gap: 12px; padding: 12px; width: 960px; height: 540px; box-sizing: border-box; }
-.tvcol { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden; }
-.tvtables { display: grid; grid-template-columns: 1fr 1fr; align-content: start; }
+.tvw { display: grid; grid-template-columns: 1fr 1.9fr 1fr; gap: 10px; padding: 10px; width: 960px; height: 540px; box-sizing: border-box; }
+.tvcol { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
+.tvcol > .panel { margin: 0; }
+.tvcol > .panel:last-child { flex: 1; min-height: 0; overflow: hidden; }
+.tvtables { display: grid; grid-template-columns: repeat(var(--tc, 2), 1fr); grid-auto-rows: 1fr; }
+.tvtables > .panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tvtables > .panel > div:not(.ph) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .tvtables .row > b + .tag { display: none; }
-.tvw .panel { margin: 0; }
-.tvw .big { font-size: 64px; line-height: 1; }
-.tvw .qr svg { width: 84px; height: 84px; background: #fff; padding: 4px; }
+.tvtables b.up { font-size: 20px; }
+.tvtables .num { font-size: 34px !important; }
+.tvtables .alert, .tvtables .gold { font-size: 22px; font-weight: 800; }
+.tvw .ph { font-size: 12px; }
+.tvw .big { font-size: 76px; line-height: .95; letter-spacing: -.04em; }
 .tvw .big + .tag { display: none; }
+.tvw .bar { height: 12px; }
+.tvw .qr svg { width: 78px; height: 78px; background: #fff; padding: 4px; }
 .tvw .qr + div { min-width: 0; }
-.tvw .qr + div .h2 { font-size: 17px; overflow-wrap: anywhere; }
+.tvw .qr + div .h2 { font-size: 16px; overflow-wrap: anywhere; }
+.tvw .leader { font-size: 14px; padding: 2px 0; }
+.tvw .tvfeed .small { font-size: 15px; line-height: 1.25; }

@@ -591,8 +591,8 @@ function tvView() {
   return `<div class="tvw">
     <div class="tvcol">${left}${panel('MITMACHEN', `<div class="row" style="gap:14px"><div class="qr" data-qr="${esc(join)}"></div><div><div class="tag">EVENT-CODE</div><div class="h2">${esc(store.code)}</div><div class="small muted">${s.players.length} SPIELER</div></div></div>`)}
       ${lb.length ? panel('LEADERBOARD', lb.map((p, i) => leader(`${String(i + 1).padStart(2, '0')}  ${p.name}`, `${p.wins}W · ${p.points} PTS`, i === 0 ? 'gold' : '')).join('')) : ''}</div>
-    <div class="tvcol tvtables">${tables}</div>
-    <div class="tvcol">${feedPanel()}</div></div>`;
+    <div class="tvcol tvtables" style="--tc:${r && r.tables.length === 1 ? 1 : 2}">${tables}</div>
+    <div class="tvcol tvfeed">${feedPanel()}</div></div>`;
 }
 
 const localDT = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
