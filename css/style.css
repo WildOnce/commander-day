@@ -319,3 +319,10 @@ body.tv #app { max-width: none; padding: 0; }
 .tvw .qr + div .h2 { font-size: 16px; overflow-wrap: anywhere; }
 .tvw .leader { font-size: 14px; padding: 2px 0; }
 .tvw .tvfeed .small { font-size: 15px; line-height: 1.25; }
+.tvw.tv3 { grid-template-columns: 2.7fr 1fr; grid-template-rows: auto 1fr; }
+.tvw.tv3 > .tvcol:first-child { grid-column: 2; grid-row: 1; }
+.tvw.tv3 > .tvcol:first-child > .panel:not(:first-child) { display: none; }
+.tvw.tv3 .tvtables { grid-column: 1; grid-row: 1 / 3; }
+.tvw.tv3 .tvfeed { grid-column: 2; grid-row: 2; }
+.tvw.tv3 .tvtables b.up { font-size: 18px; }
+.tvw.tv3 .tvtables .num { font-size: 30px !important; }

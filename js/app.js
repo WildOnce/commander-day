@@ -586,12 +586,12 @@ function tvView() {
     ? panel(`RUNDE ${r.n}`, timerBlock(r), { cls: 'hi' })
     : panel(s.config.name, `<div class="h2">${s.rounds.length ? 'PAUSE · GLEICH GEHT’S WEITER' : 'GLEICH GEHT’S LOS'}</div><div class="small muted">${esc(s.config.eventPlace || '')}</div>`, { cls: 'hi' });
   const lb = S.leaderboard.filter((p) => p.games).slice(0, 6);
-  const tables = r ? r.tables.map((t) => { const { rows, st } = tableInfo(s, t); return panel(`TISCH ${t.no}${t.auto ? ' · BAR' : ''}`, rows, { right: st }); }).join('')
+  const tables = r ? r.tables.map((t) => { const { rows, st } = tableInfo(s, t); return panel(`TISCH ${t.no}${t.auto ? ' · BAR' : ''}`, rows, { right: st.replace('NICHT GESTARTET', 'WARTET') }); }).join('')
     : panel('TISCHE', '<div class="dim">NOCH KEINE RUNDE AUSGELOST.</div>');
-  return `<div class="tvw">
+  return `<div class="tvw ${r?.tables.length === 3 ? 'tv3' : ''}">
     <div class="tvcol">${left}${panel('MITMACHEN', `<div class="row" style="gap:14px"><div class="qr" data-qr="${esc(join)}"></div><div><div class="tag">EVENT-CODE</div><div class="h2">${esc(store.code)}</div><div class="small muted">${s.players.length} SPIELER</div></div></div>`)}
       ${lb.length ? panel('LEADERBOARD', lb.map((p, i) => leader(`${String(i + 1).padStart(2, '0')}  ${p.name}`, `${p.wins}W · ${p.points} PTS`, i === 0 ? 'gold' : '')).join('')) : ''}</div>
-    <div class="tvcol tvtables" style="--tc:${r && r.tables.length === 1 ? 1 : 2}">${tables}</div>
+    <div class="tvcol tvtables" style="--tc:${r ? (r.tables.length === 4 ? 2 : Math.min(r.tables.length, 3)) : 1}">${tables}</div>
     <div class="tvcol tvfeed">${feedPanel()}</div></div>`;
 }
 
