@@ -4,7 +4,7 @@ import { AWARD_INFO, DEFAULT_CONFIG, MAX_DECKS, endGame, makeTables, scoreTables
 import { lifeView, afterLife, lifeTick, lcActions, initLifeInput, myTable, timerLabel } from './lc.js';
 import { wrappedView, afterWrapped, wrActions } from './wrapped.js';
 import { sprite } from './sprites.js';
-import { isFuchsbaum } from './fun.js';
+import { isFugbaum, feedKo, feedSprite } from './fun.js';
 import { autocomplete, cardInfo, drawArt } from './art.js';
 import { sha, uid, clock, dur, buzz } from './util.js';
 
@@ -498,8 +498,8 @@ function feed(limit = 14) {
         const seat = g.seats.find((x) => x.pid === e.pid);
         if (seat?.poison >= 7 && !poisonW[e.pid]) { poisonW[e.pid] = 1; ev.push({ t: e.t, s: 'potion', c: 'alert', m: `${N(e.pid)} wird langsam grün im Gesicht ☠`, T }); }
       } else if (e.k === 'out') {
-        if (e.cause === 'mill') ev.push({ t: e.t, s: 'crab', c: 'alert', m: e.by ? `${N(e.pid)} wurde von ${N(e.by)} gemillt 📚${isFuchsbaum(e.by) ? ' – Danke für den großen Spaß, Filippo. 🦀' : ''}` : `${N(e.pid)} hat sich selbst gemillt. Respekt. 📚`, T });
-        else ev.push({ t: e.t, s: 'skull', c: 'alert', m: `${N(e.pid)} ist raus${e.by ? ` – danke, ${N(e.by)}` : ''}. Ab an die Bar 🍺`, T });
+        if (e.cause === 'mill') ev.push({ t: e.t, s: 'crab', c: 'alert', m: e.by ? `${N(e.pid)} wurde von ${N(e.by)} gemillt 📚${isFugbaum(e.by) ? ' – Danke für den großen Spaß, Filippo. 🦀' : ''}` : `${N(e.pid)} hat sich selbst gemillt. Respekt. 📚`, T });
+        else { const extra = feedKo(g, e); ev.push({ t: e.t, s: feedSprite(g, e), c: 'alert', m: `${N(e.pid)} ist raus${e.by ? ` – danke, ${N(e.by)}` : ''}. ${extra ? esc(extra) : 'Ab an die Bar 🍺'}`, T }); }
       } else if (e.k === 'end') {
         const w = g.ended?.placements.find((x) => x.place === 1 && !x.draw);
         ev.push({ t: e.t, s: w ? 'trophy' : 'shield', c: 'gold', m: w ? `${N(w.pid)} gewinnt ${T}! 🏆` : `${T} endet unentschieden 🤝`, T });

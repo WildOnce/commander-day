@@ -1,5 +1,6 @@
 // Tiny pixel-art sprites rendered as crisp SVG. Palette: # fg · o mid · d dim · r alert · g gold · w white
-const COL = { '#': 'var(--fg)', o: 'var(--mid)', d: 'var(--dim)', r: 'var(--alert)', g: 'var(--gold)', w: '#f2fff8' };
+const COL = { '#': 'var(--fg)', o: 'var(--mid)', d: 'var(--dim)', r: 'var(--alert)', g: 'var(--gold)', w: '#f2fff8',
+  v: '#2fd27a', b: '#3d8bff', p: '#9b6bff', k: '#111111', n: '#a8643a', s: '#b9c2c9' };
 
 export const SPRITES = {
   skull: [
@@ -70,12 +71,27 @@ export const SPRITES = {
     'grrwwwrrrg', 'grrwwwwrrg', '.grrwwrrg.', '..grrrrg..',
   ],
   book: ['.oooooooo.', 'o########o', 'o#oooooo#o', 'o########o', 'o#oooooo#o', 'o########o', '.oooooooo.'],
+  goblin: ['..vv....vv..', '.vvvv..vvvv.', '..vvvvvvvv..', '...vkvvkv...', '...vvvvvv...', '....vwwv....', '...vvvvvv...', '..vvvvvvvv..', '..v.vvvv.v..', '....v..v....'],
+  wolf: ['.s.......s.', '.ss.....ss.', '.sss...sss.', '.sssssssss.', '.sskssskss.', '..sssssss..', '...sswss...', '....sss....'],
+  dragon: ['.r.......r..', '.rr.....rr..', '..rrrrrrr...', '..rkrrrkr...', '..rrrrrrrg..', '...rrrrr.gg.', 'r.rrrrrrr.g.', 'rrrrrrrrrr..', '.r.r...r.r..'],
+  robot: ['...ssssss...', '..ssssssss..', '..srrssrrs..', '..ssssssss..', '..sswwwwss..', '...ssssss...', '.ssssssssss.', '.s.ssssss.s.', '...ss..ss...'],
+  eye: ['....rrrr....', '..rrggggrr..', '.rggg..gggr.', 'rggg.kk.gggr', '.rggg..gggr.', '..rrggggrr..', '....rrrr....'],
+  bat: ['p....pp....p', 'pp..pppp..pp', 'ppppkppkpppp', '.pppppppppp.', '..p.pppp.p..', '.....pp.....'],
+  panther: ['.p......p.', '.pp....pp.', '.pppppppp.', '.pgppppgp.', '.pppppppp.', '..ppwwpp..', '...pppp...'],
+  cog: ['....ss....', '.s.ssss.s.', '..ssssss..', '.sss..sss.', 'ssss..ssss', '.sss..sss.', '..ssssss..', '.s.ssss.s.', '....ss....'],
+  gem: ['..bbbbbb..', '.bwbbbbwb.', 'bbbbbbbbbb', '.bbbbbbbb.', '..bbbbbb..', '...bbbb...', '....bb....'],
+  frog: ['.vv....vv.', 'vkvv..vvkv', 'vvvvvvvvvv', '.vvvvvvvv.', '.vkkkkkkv.', '..vvvvvv..', '.vv....vv.'],
+  cookie: ['...nnnn...', '..nnnnnn..', '..nwnnwn..', '..nnnnnn..', '...nwwn...', 'nnnnnnnnnn', '..nnwnnn..', '..nnnnnn..', '..nn..nn..', '.nnn..nnn.'],
+  demon: ['r........r', 'rr......rr', '.rrrrrrrr.', '.rgrrrrgr.', '.rrrrrrrr.', '..rkkkkr..', '...rrrr...'],
+  bird: ['...bb.....', '..bbbb....', '..bkbbbbb.', '.gbbbbbbbb', '..bbbbbbb.', '...bbbbb..', '....b.b...'],
+  bolt: ['....gg', '...gg.', '..gg..', '.ggggg', '...gg.', '..gg..', '.gg...', 'gg....'],
   star: [
     '.....#.....', '....###....', '#.#######.#', '.#########.', '..#######..', '.####.####.', '.##.....##.', '#.........#',
   ],
 };
 
-export function sprite(name, px = 4, cls = '') {
+/** mono=true: one consistent look for mascots/effects – body white, details (k/w) as dark pixels. */
+export function sprite(name, px = 4, cls = '', mono = false) {
   const rows = SPRITES[name] || SPRITES.star;
   const w = Math.max(...rows.map((r) => r.length)), h = rows.length;
   let rects = '';
@@ -86,7 +102,8 @@ export function sprite(name, px = 4, cls = '') {
       if (ch === '.' || ch === ' ') { x++; continue; }
       let run = 1;
       while (row[x + run] === ch) run++;
-      rects += `<rect x="${x}" y="${y}" width="${run}" height="1" fill="${COL[ch] || COL['#']}"/>`;
+      const fill = mono ? ('kwod'.includes(ch) ? '#111111' : '#f5f5f3') : COL[ch] || COL['#']; // details dark, body white
+      rects += `<rect x="${x}" y="${y}" width="${run}" height="1" fill="${fill}"/>`;
       x += run;
     }
   });

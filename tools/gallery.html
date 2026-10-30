@@ -1,0 +1,31 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=540">
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@900&family=Inter+Tight:wght@700;800&family=JetBrains+Mono:wght@400;700&display=block" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=x">
+<style>
+  body{width:540px;padding:18px 14px;background:#0d0d0d}
+  .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .c{border-radius:18px;padding:10px 8px 10px;color:#111;background-image:radial-gradient(rgba(0,0,0,.12) 1.2px,transparent 1.6px);background-size:9px 9px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-height:178px}
+  .c .art{height:76px;display:grid;place-items:center}
+  .c b{font-family:var(--sans);font-weight:800;font-size:12px;line-height:1.05;text-transform:uppercase}
+  .c i{font-style:normal;font-family:var(--mono);font-size:9px;opacity:.7;text-transform:uppercase}
+  .c .ln{font-family:var(--dot);font-weight:900;font-size:10.5px;background:#111;color:#f5f5f3;padding:3px 6px;box-shadow:0 0 0 1.5px #f5f5f3;line-height:1.15;text-transform:uppercase}
+  h1{font-family:var(--dot);font-weight:900;color:#f5f5f3;font-size:30px;margin:0 0 4px} .t{font-family:var(--mono);color:#9b9b98;font-size:10.5px;margin-bottom:12px;text-transform:uppercase}
+</style></head><body>
+<h1>COMMANDER-FIGUREN</h1><div class="t" id="sub"></div><div class="g" id="g"></div>
+<script type="module">
+import { sprite } from '../js/sprites.js';
+import { GAGS } from '../js/fun.js';
+const P = { 'Robin': "Nekusar, the Mindrazer;Kellan, the Kid;Helga, Skittish Seer;Breena, the Demagogue;Breya, Etherium Shaper;Ognis, the Dragon's Lash;The Great Goblin;Kotis, the Fangkeeper;High Perfect Morcant;Havi, the All-Father;Brenard, Ginger Sculptor;Clement, the Worrywort;Juri, Master of the Revue",
+  'Kevka': "Golbez, Crystal Collector;Sedris, the Traitor King;Codie, Ravenous Codex;Niko, Light of Hope;Faldorn, Dread Wolf Herald;Zurgo Stormrender;Satya, Aetherflux Genius",
+  'HerrFugbaum': "Homer, the Hermit;Valgavoth, Harrower of Souls;Y'shtola, Night's Blessed;Zoraline, Cosmos Caller;Flubs, the Fool;Ultron, Artificial Malevolence;Ureni of the Unwritten",
+  'Kim': "Ashling, the Limitless;Ruric Thar, the Unbowed;T'Challa, the Black Panther;Niv-Mizzet, Visionary",
+  'Kevin J.': "Mogis, God of Slaughter;Zur the Enchanter;Cloud, Ex-SOLDIER;Sauron, the Dark Lord;Urza, Chief Artificer;Yuma, Proud Protector" };
+const part = new URLSearchParams(location.search).get('part') || '1';
+const all = Object.entries(P).flatMap(([p, cs]) => cs.split(';').map((c) => [p, c]));
+const list = part === '1' ? all.slice(0, 19) : all.slice(19);
+document.getElementById('sub').textContent = `Teil ${part}/2 · weiße Pixel-Figur · Spruch beim Commander-Schaden`;
+const cols = ['#ff6a00', '#3d8bff', '#2fd27a', '#ff4fa3', '#ffc53d', '#9b6bff'];
+document.getElementById('g').innerHTML = list.map(([p, c], k) => { const g = GAGS.find((x) => x.re.test(c));
+  return `<div class="c" style="background-color:${cols[k % 6]}"><div class="art">${sprite(g.s, 4, 'mono', true)}</div><b>${c}</b><i>${p}</i><span class="ln">${g.walk[0]}</span></div>`; }).join('');
+document.fonts.ready.then(() => document.body.dataset.ready = 1);
+</script></body></html>

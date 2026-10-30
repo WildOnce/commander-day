@@ -3,7 +3,7 @@ import { A, store, DEVICE, MODE, render, toast, panel, leader, esc, pname, me, g
 import { gameId, newGame, setLife, setCmd, settle, endGame, timerInfo, alive, cmdFrom, gameStart } from './logic.js';
 import { sprite, confetti } from './sprites.js';
 import { clock, buzz, pick } from './util.js';
-import { fxScan, millQuip, winSub } from './fun.js';
+import { fxScan, koQuip, winSub } from './fun.js';
 const mins = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 
 const QUIPS = [
@@ -230,9 +230,9 @@ function tile(g, i, ctrl, n) {
   if (s.out) {
     const recent = now - s.out.at < 5000;
     const place = g.ended?.placements.find((x) => x.pid === s.pid)?.place;
-    const quip = s.out.cause === 'mill' ? millQuip(s) : QUIPS[(s.out.at + s.pid.charCodeAt(0)) % QUIPS.length];
+    const quip = koQuip(g, s) || QUIPS[(s.out.at + s.pid.charCodeAt(0)) % QUIPS.length];
     dead = `<div class="deadfx" ${ctrl ? `data-act="lc-sheet" data-k="seat" data-i="${i}"` : ''}>
-      <div class="${recent ? 'pop' : 'rise'}">${sprite(s.out.cause === 'mill' ? (recent ? 'crab' : 'book') : recent ? 'skull' : 'ghost', n > 4 ? 4 : 6, recent ? 'glitch' : '')}</div>
+      <div class="${recent ? 'pop' : 'rise'}">${sprite(s.out.cause === 'mill' ? (recent ? 'crab' : 'book') : recent ? 'skull' : 'ghost', n > 4 ? 4 : 6, recent ? 'glitch' : '', s.out.cause === 'mill')}</div>
       <div class="ko ${recent ? 'glitch' : ''}">K.O.</div><div class="nm">${esc(p?.name || '')}</div>
       <div class="tag" style="color:var(--alert)">${causeTxt(s.out.cause, s.out.by)}${s.out.by ? ' · BY ' + esc(pname(s.out.by)) : ''}${place ? ` · PLATZ ${place}` : ''}</div>
       <div class="small">${quip}</div></div>`;
@@ -364,7 +364,7 @@ function resultHtml(g, ref) {
   }).join('');
   const win = pl.find((x) => x.place === 1 && !x.draw);
   const title = win ? 'VICTORY' : g.ended.reason === 'time' ? 'TIME OUT' : 'DRAW';
-  const sub = win ? (winSub(win.pid) || `> ${esc(pname(win.pid)).toUpperCase()} REITET ALLEIN DAVON`)
+  const sub = win ? (winSub(win.pid, g) || `> ${esc(pname(win.pid)).toUpperCase()} REITET ALLEIN DAVON`)
     : g.ended.reason === 'time' ? '> ZEIT ABGELAUFEN · SPIEL BEENDET → UNENTSCHIEDEN' : '> SPIEL BEENDET → UNENTSCHIEDEN';
   const ws = win && g.seats.find((y) => y.pid === win.pid);
   const wArt = ws && A.snap.P[win.pid]?.decks?.find((d) => d.id === ws.deckId)?.art;
