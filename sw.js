@@ -1,7 +1,7 @@
 // Network-first service worker: always fresh when online, works offline from cache.
-const CACHE = 'cz-v27';
-const SHELL = ['./', './index.html', './host.html', './tv.html', './css/style.css?v=27', './js/app.js?v=27', './js/ctx.js', './js/sync.js', './js/util.js',
-  './js/logic.js', './js/lc.js', './js/wrapped.js', './js/sprites.js', './js/art.js', './js/demo.js', './js/demo-store.js', './vendor/mqtt.min.js', './vendor/qrcode.js',
+const CACHE = 'cz-v28';
+const SHELL = ['./', './index.html', './host.html', './tv.html', './css/style.css?v=28', './js/app.js?v=28', './js/ctx.js', './js/sync.js', './js/util.js',
+  './js/logic.js', './js/lc.js', './js/wrapped.js', './js/sprites.js', './js/art.js', './js/demo.js', './js/fun.js', './js/demo-store.js', './vendor/mqtt.min.js', './vendor/qrcode.js',
   './manifest.webmanifest', './manifest-host.webmanifest', './icons/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

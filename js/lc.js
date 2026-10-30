@@ -3,6 +3,7 @@ import { A, store, DEVICE, MODE, render, toast, panel, leader, esc, pname, me, g
 import { gameId, newGame, setLife, setCmd, settle, endGame, timerInfo, alive, cmdFrom, gameStart } from './logic.js';
 import { sprite, confetti } from './sprites.js';
 import { clock, buzz, pick } from './util.js';
+import { fxScan, millQuip, winSub } from './fun.js';
 const mins = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 
 const QUIPS = [
@@ -193,7 +194,7 @@ function board(g, ref) {
   const lock = g.ended ? null : lockedFor(g.roundId);
   const tl = (i) => tile(g, i, ctrl && !lock, n);
   const ctrlSheets = ctrl;
-  let html = `<div class="lcw ${lock ? 'locked' : ''}">
+  let html = `<div class="lcw ${lock ? 'locked' : ''}" data-g="${g.id}">
     ${nTop ? `<div class="lcrow flip" style="grid-template-columns:repeat(${top.length},1fr)">${top.map(tl).join('')}</div>` : ''}
     <div class="lcmid">
       <span class="row" style="gap:6px"><button class="ib" data-act="nav" data-to="${backTo()}" aria-label="Zurück zur Übersicht">←</button><button class="ib" data-act="lc-sheet" data-k="menu" aria-label="Menü">☰</button></span>
@@ -229,15 +230,15 @@ function tile(g, i, ctrl, n) {
   if (s.out) {
     const recent = now - s.out.at < 5000;
     const place = g.ended?.placements.find((x) => x.pid === s.pid)?.place;
-    const quip = QUIPS[(s.out.at + s.pid.charCodeAt(0)) % QUIPS.length];
+    const quip = s.out.cause === 'mill' ? millQuip(s) : QUIPS[(s.out.at + s.pid.charCodeAt(0)) % QUIPS.length];
     dead = `<div class="deadfx" ${ctrl ? `data-act="lc-sheet" data-k="seat" data-i="${i}"` : ''}>
-      <div class="${recent ? 'pop' : 'rise'}">${sprite(recent ? 'skull' : 'ghost', n > 4 ? 4 : 6, recent ? 'glitch' : '')}</div>
+      <div class="${recent ? 'pop' : 'rise'}">${sprite(s.out.cause === 'mill' ? (recent ? 'crab' : 'book') : recent ? 'skull' : 'ghost', n > 4 ? 4 : 6, recent ? 'glitch' : '')}</div>
       <div class="ko ${recent ? 'glitch' : ''}">K.O.</div><div class="nm">${esc(p?.name || '')}</div>
       <div class="tag" style="color:var(--alert)">${causeTxt(s.out.cause, s.out.by)}${s.out.by ? ' · BY ' + esc(pname(s.out.by)) : ''}${place ? ` · PLATZ ${place}` : ''}</div>
       <div class="small">${quip}</div></div>`;
   }
   const seatable = g.controller === DEVICE && !g.ended;
-  return `<div class="tile n${n} ${s.out ? 'dead' : ''} ${g.monarch === s.pid ? 'mon' : ''}" style="--pc:var(--p${(s.c ?? i) % 6})"${seatable ? ` data-seat="${i}" data-g="${g.id}"` : ''}>
+  return `<div class="tile n${n} ${s.out ? 'dead' : ''} ${g.monarch === s.pid ? 'mon' : ''}" style="--pc:var(--p${(s.c ?? i) % 6})" data-fx="${i}"${seatable ? ` data-seat="${i}" data-g="${g.id}"` : ''}>
     <div class="who" ${ctrl ? `data-act="lc-sheet" data-k="seat" data-i="${i}"` : ''}><div class="whorow">${cmdArt(p, s)}
       <div class="whotext"><b>${esc(p?.name || '?')}</b><span>${esc(s.deckName || '▸ COMMANDER WÄHLEN')}</span></div></div></div>
     ${g.monarch === s.pid ? `<span class="crownb">${sprite('crown', 2)}</span>` : ''}
@@ -357,15 +358,18 @@ function resultHtml(g, ref) {
     const s = g.seats.find((y) => y.pid === x.pid);
     const spr = x.place === 1 ? (x.draw ? 'shield' : 'trophy') : x.place === last ? 'skull' : 'sword';
     const info = s?.out ? `K.O. ${clock(s.out.at - start)}` : `${s?.life} ♥`;
-    return `<div class="rank stage" style="--d:${0.9 + pl.indexOf(x) * 0.25}s"><span class="p ${x.place === 1 ? 'gold' : x.place === last ? 'alert' : ''}">${x.place}.</span>${sprite(spr, 3, x.place === 1 ? 'bob' : '')}
+    return `<div class="rank stage" style="--d:${0.9 + pl.indexOf(x) * 0.25}s"><span class="p ${x.place === 1 ? 'gold' : x.place === last ? 'alert' : ''}">${x.place}.</span>${sprite(spr, 3, x.place === 1 ? 'bob' : '')}${s ? cmdArt(A.snap.P[x.pid], s) : ''}
       <div class="grow" style="flex:1;min-width:0"><div class="up">${esc(pname(x.pid))}${x.draw ? ' <span class="gold small">· UNENTSCHIEDEN</span>' : ''}</div>
       <div class="tag">${esc(s?.deckName || '')}</div></div><span class="small muted">${info}</span></div>`;
   }).join('');
   const win = pl.find((x) => x.place === 1 && !x.draw);
   const title = win ? 'VICTORY' : g.ended.reason === 'time' ? 'TIME OUT' : 'DRAW';
-  const sub = win ? `> ${esc(pname(win.pid)).toUpperCase()} REITET ALLEIN DAVON`
+  const sub = win ? (winSub(win.pid) || `> ${esc(pname(win.pid)).toUpperCase()} REITET ALLEIN DAVON`)
     : g.ended.reason === 'time' ? '> ZEIT ABGELAUFEN · SPIEL BEENDET → UNENTSCHIEDEN' : '> SPIEL BEENDET → UNENTSCHIEDEN';
-  const winTrophy = win ? `<div class="stage pop-in" style="--d:.15s;text-align:center">${sprite('trophy', 7, 'bob')}</div>` : '';
+  const ws = win && g.seats.find((y) => y.pid === win.pid);
+  const wArt = ws && A.snap.P[win.pid]?.decks?.find((d) => d.id === ws.deckId)?.art;
+  const winTrophy = win ? `<div class="stage pop-in winbox" style="--d:.15s">${wArt ? `<canvas class="winart" width="40" height="30" data-art="${esc(wArt)}"></canvas>` : ''}<span class="wintro">${sprite('trophy', wArt ? 5 : 7, 'bob')}</span>
+    ${ws?.deckName ? `<div class="tag" style="text-align:center;margin-top:6px">${esc(ws.deckName)}</div>` : ''}</div>` : '';
   return `<div class="overlay result ${still}" id="result" data-key="${key}"><div class="box stack">
     <div class="stage" style="--d:0s;position:relative;height:70px;overflow:hidden"><div class="ride" style="position:absolute;bottom:0">${sprite('rider', 4)}</div></div>
     ${winTrophy}
@@ -378,6 +382,8 @@ function resultHtml(g, ref) {
 }
 
 export function afterLife() {
+  const w = document.querySelector('.lcw[data-g]');
+  if (w) fxScan(A.snap.G[w.dataset.g]);
   const r = document.getElementById('result');
   if (r && !A.celebrated[r.dataset.key]) {
     A.celebrated[r.dataset.key] = 1;
