@@ -23,9 +23,9 @@ const P = { 'Robin': "Nekusar, the Mindrazer;Kellan, the Kid;Helga, Skittish See
 const part = new URLSearchParams(location.search).get('part') || '1';
 const all = Object.entries(P).flatMap(([p, cs]) => cs.split(';').map((c) => [p, c]));
 const list = part === '1' ? all.slice(0, 19) : all.slice(19);
-document.getElementById('sub').textContent = `Teil ${part}/2 · weiße Pixel-Figur · Spruch beim Commander-Schaden`;
+document.getElementById('sub').textContent = `Teil ${part}/2 · weiße Pixel-Figur · Bewegung · Sprüche nur Filippo`;
 const cols = ['#ff6a00', '#3d8bff', '#2fd27a', '#ff4fa3', '#ffc53d', '#9b6bff'];
 document.getElementById('g').innerHTML = list.map(([p, c], k) => { const g = GAGS.find((x) => x.re.test(c));
-  return `<div class="c" style="background-color:${cols[k % 6]}"><div class="art">${sprite(g.s, 4, 'mono', true)}</div><b>${c}</b><i>${p}</i><span class="ln">${g.walk[0]}</span></div>`; }).join('');
+  return `<div class="c" style="background-color:${cols[k % 6]}"><div class="art">${sprite(g.s, 4, 'mono', true)}</div><b>${c}</b><i>${p}</i>${g.s === 'crab' ? `<span class="ln">${g.walk[0]}</span>` : `<i>${g.m}</i>`}</div>`; }).join('');
 document.fonts.ready.then(() => document.body.dataset.ready = 1);
 </script></body></html>
