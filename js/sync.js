@@ -56,6 +56,16 @@ export class Store extends EventTarget {
   /** online for at least `ms` – long enough for retained messages to have arrived */
   stableOnline(ms = 3000) { return this.online && Date.now() - (this.onlineSince || Date.now()) >= ms; }
 
+  /** Event (re)start time minus 1 h clock slack. Anything older is a leftover from earlier tests on this code. */
+  get epoch() { const c = this.e.get('config'); return c && !c.d && c.v?.createdAt ? c.v.createdAt - 3600000 : 0; }
+  /** Drop pre-epoch leftovers from the local cache so they are never shown or re-uploaded. */
+  prune() {
+    const ep = this.epoch; if (!ep) return;
+    let n = 0;
+    for (const [k, r] of this.e) if (k !== 'config' && r.t < ep) { this.e.delete(k); n++; }
+    if (n) this.dirty('config');
+  }
+
   onMsg(i, topic, buf) {
     if (!buf?.length) return;
     const key = topic.slice(this.prefix.length);
@@ -63,19 +73,23 @@ export class Store extends EventTarget {
     try { rec = JSON.parse(new TextDecoder().decode(buf)); } catch { return; }
     if (!rec || typeof rec.t !== 'number') return;
     this.seen[i].set(key, Math.max(rec.t, this.seen[i].get(key) ?? -1));
+    if (key !== 'config' && rec.t < this.epoch) return; // leftover from before the event was (re)created
     const cur = this.e.get(key);
     if (!cur || rec.t > cur.t || (rec.t === cur.t && String(rec.by) > String(cur.by))) {
       // a newer remote write beats our still-pending local one (e.g. someone took over the table)
       if (this.timers.has(key)) { clearTimeout(this.timers.get(key)); this.timers.delete(key); }
       this.e.set(key, rec);
       this.dirty(key);
+      if (key === 'config') this.prune();
     }
   }
 
   heal(i) {
     const c = this.clients[i];
     if (!c?.connected) return;
+    const ep = this.epoch;
     for (const [k, rec] of this.e) {
+      if (k !== 'config' && rec.t < ep) continue; // never resurrect pre-epoch leftovers
       if ((this.seen[i].get(k) ?? -1) < rec.t) c.publish(this.prefix + k, JSON.stringify(rec), { qos: 1, retain: true });
     }
   }

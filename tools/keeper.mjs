@@ -15,6 +15,9 @@ let E = {};
 try { E = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
 const save = () => fs.writeFileSync(FILE, JSON.stringify(E));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+// same rule as the app: entries older than the event (re)creation (minus 1 h) are test leftovers
+const epoch = () => (E.config && !E.config.d && E.config.v?.createdAt ? E.config.v.createdAt - 3600000 : 0);
+const prune = () => { const ep = epoch(); if (!ep) return; for (const k of Object.keys(E)) if (k !== 'config' && E[k].t < ep) { delete E[k]; dirty = true; } };
 const newer = (a, b) => !b || a.t > b.t || (a.t === b.t && String(a.by) > String(b.by));
 
 const clients = BROKERS.map((url, i) => {
@@ -30,12 +33,14 @@ const clients = BROKERS.map((url, i) => {
     if (!rec || typeof rec.t !== 'number') return;
     const k = topic.slice(PRE.length);
     seen.set(k, Math.max(rec.t, seen.get(k) ?? -1));
-    if (newer(rec, E[k])) { E[k] = rec; dirty = true; }
+    if (k !== 'config' && rec.t < epoch()) return;
+    if (newer(rec, E[k])) { E[k] = rec; dirty = true; if (k === 'config') prune(); }
   });
   function heal() {
     if (!c.connected) return;
     let n = 0;
     for (const [k, rec] of Object.entries(E)) {
+      if (k !== 'config' && rec.t < epoch()) continue;
       if ((seen.get(k) ?? -1) < rec.t) { c.publish(PRE + k, JSON.stringify(rec), { qos: 1, retain: true }); n++; }
     }
     if (n) log(tag, `healed ${n} entr${n === 1 ? 'y' : 'ies'}`);
