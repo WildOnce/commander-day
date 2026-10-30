@@ -80,6 +80,17 @@ export class Store extends EventTarget {
     }
   }
 
+  /** Re-fetch the retained state from every broker and re-publish whatever a broker has lost (free public
+   *  brokers may drop retained messages). Same rules as on connect: only records newer than the broker's win. */
+  resync() {
+    this.clients.forEach((c, i) => {
+      if (!c?.connected) return;
+      this.seen[i].clear();
+      c.unsubscribe(`${this.prefix}#`, () => c.subscribe(`${this.prefix}#`, { qos: 1 }));
+      clearTimeout(this[`heal${i}`]);
+      this[`heal${i}`] = setTimeout(() => this.heal(i), 5000);
+    });
+  }
   dirty(key) {
     clearTimeout(this._emitT);
     this._changed = this._changed || new Set();

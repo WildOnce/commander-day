@@ -23,6 +23,7 @@ async function boot() {
   window.addEventListener('hashchange', () => { A.route = location.hash.replace(/^#\/?/, ''); if (DEMO) demoRoute(A.route); A.ui.sheet = null; render(); window.scrollTo(0, 0); });
   A.route = location.hash.replace(/^#\/?/, '');
   setRender(doRender);
+  if (MODE === 'host') setInterval(() => { if (store.prefix && store.get('config')) store.resync(); }, 120000); // keep the brokers' copy complete
   if (MODE === 'tv') { // TV: refresh 'vor x min', keep screen on, scale the 960x540 layout to the screen
     setInterval(render, 30000); wake(true);
     const fit = () => { document.body.style.zoom = Math.min(innerWidth / 960, innerHeight / 540); };
@@ -43,11 +44,16 @@ async function enter(code, { silent = false } = {}) {
   A.ui.login = { busy: true, code };
   render();
   await store.open(code);
-  const cfg = await store.waitFor('config', silent ? 1500 : 7000);
+  let cfg = await store.waitFor('config', silent ? 1500 : 7000);
+  // slow mobile networks: give the brokers time to connect and deliver retained data before giving up
+  for (const t0 = Date.now(); !cfg && !silent && Date.now() - t0 < 12000 && !store.stableOnline(5000);) {
+    await new Promise((r) => setTimeout(r, 500)); cfg = store.get('config');
+  }
   refresh();
   if (!cfg && MODE !== 'host' && !silent) {
+    const offline = !store.online;
     store.close(); store.prefix = null;
-    A.ui.login = { err: 'CODE UNBEKANNT · KEIN EVENT GEFUNDEN', code };
+    A.ui.login = { err: offline ? 'KEINE VERBINDUNG ZUM SERVER · INTERNET PRÜFEN & NOCHMAL' : 'CODE UNBEKANNT · KEIN EVENT GEFUNDEN', code };
     return render();
   }
   ls.set('cz.code', store.code);

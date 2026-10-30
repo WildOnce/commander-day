@@ -75,4 +75,5 @@ Ein Push darf **niemals** Spielstände, Runden, Timer oder Spieler verändern. D
 | Falsche Auslosung | vor Veröffentlichen: ↻ NEU / Spieler antippen = tauschen |
 | Handy zeigt alte Version | App schließen & neu öffnen; notfalls Safari-Website-Daten löschen |
 | Sync „LOST“ | WLAN/Mobilfunk prüfen; Daten sind lokal gecacht und heilen sich beim Reconnect |
+| „CODE UNBEKANNT“ bei allen | Public Broker hat retained Daten verworfen → host.html am Host-Gerät (hat Cache) öffnen & offen lassen: heilt beim Verbinden + alle 2 Min (`store.resync()`); sonst SETUP → Import Backup |
 | Backup | Host → SETUP → Export (regelmäßig am Tag) |
