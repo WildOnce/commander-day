@@ -1,4 +1,5 @@
 import { demoSeed, demoTick, demoPanel, demoBanner, demoRecord, demoRoute, demoActions } from './demo.js';
+import { sfx } from './sfx.js';
 import { DEMO, A, MODE, store, DEVICE, setRender, render, refresh, go, toast, panel, leader, wubrg, topbar, pname, me, meKey, esc, ls } from './ctx.js';
 import { AWARD_INFO, DEFAULT_CONFIG, MAX_DECKS, endGame, makeTables, scoreTables, timerInfo, gameId, freePlayers, proposeAutoTable, computeStats } from './logic.js';
 import { lifeView, afterLife, lifeTick, lcActions, initLifeInput, myTable, timerLabel } from './lc.js';
@@ -673,8 +674,8 @@ function tick() {
     }
     const key = r.id + ti.phase;
     if (A.lastPhase && A.lastPhase !== key && r.id === A.snap.live?.id) {
-      if (ti.phase === 'ot') { toast(`${sprite('skull', 3)} <b class="alert">OVERTIME!</b> NOCH ${A.snap.config.otMin} MINUTEN`, 5000); buzz([200, 100, 200]); }
-      if (ti.phase === 'ended') { toast('<b class="alert">TIME OUT</b> · SPIEL BEENDET → UNENTSCHIEDEN', 5000); buzz([300, 100, 300]); }
+      if (ti.phase === 'ot') { toast(`${sprite('skull', 3)} <b class="alert">OVERTIME!</b> NOCH ${A.snap.config.otMin} MINUTEN`, 5000); buzz([200, 100, 200]); sfx('ot'); }
+      if (ti.phase === 'ended') { toast('<b class="alert">TIME OUT</b> · SPIEL BEENDET → UNENTSCHIEDEN', 5000); buzz([300, 100, 300]); sfx('end'); }
     }
     if (r.id === A.snap.live?.id) A.lastPhase = key;
   }
@@ -690,7 +691,7 @@ function tick() {
     if (key && ls.get(sk) !== key) {
       ls.set(sk, key);
       A.ui.assign = ref.gid;
-      buzz([120, 60, 120]);
+      buzz([120, 60, 120]); sfx('assign');
       render();
     }
   }

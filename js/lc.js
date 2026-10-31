@@ -3,6 +3,7 @@ import { A, store, DEVICE, MODE, render, toast, panel, leader, esc, pname, me, g
 import { gameId, newGame, setLife, setCmd, settle, endGame, timerInfo, alive, cmdFrom, gameStart } from './logic.js';
 import { sprite, confetti } from './sprites.js';
 import { clock, buzz, pick } from './util.js';
+import { sfx, sfxOn, toggleSfx } from './sfx.js';
 import { fxScan, koQuip, winSub } from './fun.js';
 const mins = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 
@@ -53,7 +54,7 @@ export function mutate(gid, fn, { debounce = 300 } = {}) {
   const fresh = settle(g);
   store.put('game/' + gid, g, { debounce });
   for (const s of fresh) {
-    buzz([60, 40, 160]);
+    buzz([60, 40, 160]); sfx('ko');
     if (s.out.cause === 'life' && !g.ended) A.ui.sheet = { type: 'who', i: g.seats.indexOf(s) };
   }
   if (g.ended && !cur.ended) A.ui.sheet = null; // results take over the screen
@@ -321,6 +322,7 @@ function sheetHtml(g, ref, ctrl, nTop) {
       <div class="tag" style="margin:10px 0 6px">WÜRFEL & CO.</div>
       <div class="grid2"><button class="btn" data-act="lc-roll" data-k="6">⚄ W6</button><button class="btn" data-act="lc-roll" data-k="20">◆ W20</button>
       <button class="btn" data-act="lc-roll" data-k="coin">◎ MÜNZE</button><button class="btn" data-act="lc-roll" data-k="first">⚑ WER STARTET</button></div>
+      <div class="toggle ${sfxOn() ? 'on' : ''}" data-act="lc-sfx" style="margin-top:8px"><span class="small">🔊 RETRO-SOUNDS</span><span class="sw"></span></div>
       <div class="toggle ${g.day ? 'on' : ''}" data-act="lc-day" style="margin-top:8px"><span class="small">TAG / NACHT: ${g.day === 'night' ? '☾ NACHT' : g.day === 'day' ? '☀ TAG' : 'AUS'}</span><span class="sw"></span></div>
       <div class="stack" style="margin-top:8px">
         <button class="btn block" data-act="lc-sheet" data-k="log">≡ VERLAUF</button>
@@ -396,7 +398,7 @@ export function afterLife() {
     A.celebrated[r.dataset.key] = 1;
     // confetti lives outside the overlay so re-renders can't wipe it
     setTimeout(() => confetti(document.body, 80, undefined, true), 700);
-    buzz([80, 60, 80, 60, 200]);
+    buzz([80, 60, 80, 60, 200]); sfx('win');
   }
 }
 
@@ -460,19 +462,20 @@ export const lcActions = {
   'lc-swap'(el) { swapSeats(gidNow(), +el.dataset.i, +el.dataset.j); },
   'lc-init'(el) { mutate(gidNow(), (g) => { const pid = g.seats[+el.dataset.i].pid; g.initiative = g.initiative === pid ? null : pid; }); },
   'lc-who'(el) {
-    const i = +el.dataset.i; const by = el.dataset.by || null; const manual = el.dataset.m === '1'; const mill = el.dataset.c === 'mill';
+    const i = +el.dataset.i; const by = el.dataset.by || null; const manual = el.dataset.m === '1'; const mill = el.dataset.c === 'mill'; let fell = false;
     mutate(gidNow(), (g) => {
       const s = g.seats[i];
       if (manual && !s.out) {
-        s.out = { at: Date.now(), cause: mill ? 'mill' : by ? 'manual' : 'concede', by, auto: false };
+        s.out = { at: Date.now(), cause: mill ? 'mill' : by ? 'manual' : 'concede', by, auto: false }; fell = true;
         g.log.push({ t: Date.now(), pid: s.pid, k: 'out', cause: s.out.cause, by });
         if (g.monarch === s.pid) g.monarch = null;
         if (g.initiative === s.pid) g.initiative = null;
       } else if (s.out) s.out.by = by;
     }, { debounce: 0 });
     A.ui.sheet = null;
-    buzz([60, 40, 160]);
+    buzz([60, 40, 160]); if (fell) sfx(mill ? 'mill' : 'ko');
   },
+  'lc-sfx'() { toggleSfx(); render(); },
   'lc-revive'(el) {
     mutate(gidNow(), (g) => {
       const s = g.seats[+el.dataset.i];
@@ -481,6 +484,7 @@ export const lcActions = {
       g.log.push({ t: Date.now(), pid: s.pid, k: 'revive' });
       if (g.ended && g.ended.reason !== 'time') g.ended = null;
     }, { debounce: 0 });
+    sfx('revive');
     A.ui.sheet = null;
   },
   'lc-undo'(el) {
@@ -498,6 +502,7 @@ export const lcActions = {
     else if (k === 'first') { const al = alive(g); out = al.length ? esc(pname(pick(al).pid)).toUpperCase() + ' STARTET' : 'NIEMAND MEHR DA'; }
     else out = 1 + Math.floor(Math.random() * +k);
     A.ui.sheet = null; render();
+    sfx('dice');
     toast(`<div class="row" style="gap:12px">${sprite('dice', 4, 'pop')}<div><div class="tag">${k === 'coin' ? 'MÜNZE' : k === 'first' ? 'ZUFALL' : 'W' + k}</div><div class="h1">${out}</div></div></div>`, 3500);
     buzz(30);
   },
