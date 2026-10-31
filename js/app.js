@@ -1,5 +1,5 @@
 import { demoSeed, demoTick, demoPanel, demoBanner, demoRecord, demoRoute, demoActions } from './demo.js';
-import { sfx } from './sfx.js';
+import { sfx, sfxReady } from './sfx.js';
 import { DEMO, A, MODE, store, DEVICE, setRender, render, refresh, go, toast, panel, leader, wubrg, topbar, pname, me, meKey, esc, ls } from './ctx.js';
 import { AWARD_INFO, DEFAULT_CONFIG, MAX_DECKS, endGame, makeTables, scoreTables, timerInfo, gameId, freePlayers, proposeAutoTable, computeStats } from './logic.js';
 import { lifeView, afterLife, lifeTick, lcActions, initLifeInput, myTable, timerLabel } from './lc.js';
@@ -28,6 +28,8 @@ async function boot() {
   if (MODE === 'host') setInterval(() => { if (store.prefix && store.get('config')) store.resync(); }, 120000); // keep the brokers' copy complete
   if (MODE === 'tv') { // TV: refresh 'vor x min', keep screen on, scale the 960x540 layout to the screen
     setInterval(render, 30000); wake(true);
+    const relock = () => setTimeout(render, 400); // hide the sound hint once audio is unlocked
+    document.addEventListener('keydown', relock); document.addEventListener('pointerdown', relock);
     // TVs cut off the edges (overscan): shrink to `scale` and centre. Tune with tv.html?c=CODE&scale=0.9 (remembered).
     const sc = parseFloat(params.get('scale')); if (sc >= 0.5 && sc <= 1) ls.set('cz.tvscale', sc);
     const fit = () => {
@@ -619,7 +621,8 @@ function tvView() {
     <div class="tvcol">${left}${panel('MITMACHEN', `<div class="row" style="gap:14px"><div class="qr" data-qr="${esc(join)}"></div><div><div class="tag">EVENT-CODE</div><div class="h2">${esc(store.code)}</div><div class="small muted">${s.players.length} SPIELER</div></div></div>`)}
       ${lb.length ? panel('LEADERBOARD', lb.map((p, i) => leader(`${String(i + 1).padStart(2, '0')}  ${p.name}`, `${p.wins}W · ${p.points} PTS`, i === 0 ? 'gold' : '')).join('')) : ''}</div>
     <div class="tvcol tvtables" style="--tc:${r ? (r.tables.length === 4 ? 2 : Math.min(r.tables.length, 3)) : 1}">${tables}</div>
-    <div class="tvcol tvfeed">${feedPanel()}</div></div>`;
+    <div class="tvcol tvfeed">${feedPanel()}</div></div>
+    ${sfxReady() ? '' : '<div class="tvsnd">🔊 FÜR SOUND EINMAL <b>OK</b> AUF DER FERNBEDIENUNG DRÜCKEN</div>'}`;
 }
 
 const localDT = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
@@ -674,10 +677,23 @@ function tick() {
     }
     const key = r.id + ti.phase;
     if (A.lastPhase && A.lastPhase !== key && r.id === A.snap.live?.id) {
-      if (ti.phase === 'ot') { toast(`${sprite('skull', 3)} <b class="alert">OVERTIME!</b> NOCH ${A.snap.config.otMin} MINUTEN`, 5000); buzz([200, 100, 200]); sfx('ot'); }
-      if (ti.phase === 'ended') { toast('<b class="alert">TIME OUT</b> · SPIEL BEENDET → UNENTSCHIEDEN', 5000); buzz([300, 100, 300]); sfx('end'); }
+      if (ti.phase === 'ot') { toast(`${sprite('skull', 3)} <b class="alert">OVERTIME!</b> NOCH ${A.snap.config.otMin} MINUTEN`, 5000); buzz([200, 100, 200]); if (MODE !== 'tv') sfx('ot'); }
+      if (ti.phase === 'ended') { toast('<b class="alert">TIME OUT</b> · SPIEL BEENDET → UNENTSCHIEDEN', 5000); buzz([300, 100, 300]); if (MODE !== 'tv') sfx('end'); }
     }
     if (r.id === A.snap.live?.id) A.lastPhase = key;
+    // phones: reminder at 10 and 5 minutes left, beep countdown over the last 10 seconds (play time and overtime)
+    if (MODE !== 'tv' && r.id === A.snap.live?.id && !ti.paused && (ti.phase === 'play' || ti.phase === 'ot')) {
+      const sec = Math.ceil(ti.left / 1000);
+      const once = (k, fn) => { if (!A.cd) A.cd = {}; if (!A.cd[k]) { A.cd[k] = 1; fn(); } };
+      for (const m of ti.phase === 'play' ? [10, 5] : []) if (sec <= m * 60 && sec > m * 60 - 5) once(`${r.id}:m${m}`, () => { toast(`⏳ <b>NOCH ${m} MINUTEN</b>`, 4000); buzz([100, 60, 100]); sfx('remind'); });
+      if (sec >= 1 && sec <= 10) once(`${key}:s${sec}`, () => { sfx(sec === 1 ? 'tick0' : 'tick'); if (sec <= 3) buzz(40); });
+    }
+  }
+  // TV: jingle when a new round is drawn & published (first load stays silent)
+  if (MODE === 'tv' && store.prefix) {
+    const id = A.snap.live?.id || null;
+    if (A.tvRound !== undefined && id && id !== A.tvRound) sfx('draw');
+    A.tvRound = id;
   }
   lifeTick();
   const now = Date.now();
@@ -691,7 +707,7 @@ function tick() {
     if (key && ls.get(sk) !== key) {
       ls.set(sk, key);
       A.ui.assign = ref.gid;
-      buzz([120, 60, 120]); sfx('assign');
+      buzz([120, 60, 120]); if (MODE !== 'tv') sfx('assign');
       render();
     }
   }

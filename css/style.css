@@ -365,3 +365,4 @@ body.tv #app { max-width: none; padding: 0; }
 .sheet.rot { padding-bottom: calc(20px + var(--sat)); }
 .sheet { padding-left: calc(16px + env(safe-area-inset-left, 0px)); padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
 .viewer { bottom: calc(64px + var(--sab)); }
+.tvsnd { position: fixed; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 20; background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 11px; padding: 4px 12px; border-radius: 999px; opacity: .85; }

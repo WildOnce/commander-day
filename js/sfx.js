@@ -10,6 +10,8 @@ const unlock = () => {
   } catch {}
 };
 document.addEventListener('pointerdown', unlock, { capture: true, passive: true });
+document.addEventListener('keydown', unlock, { capture: true }); // TV remote (Fire TV: OK button)
+export const sfxReady = () => ac?.state === 'running';
 
 export const sfxOn = () => ls.get('cz.sfx', true) !== false;
 export function toggleSfx() { ls.set('cz.sfx', !sfxOn()); unlock(); sfx('assign'); }
@@ -23,6 +25,11 @@ const SFX = {
   ot: [[880, 0.14], [0, 0.07], [880, 0.14], [0, 0.07], [1175, 0.3]],
   end: [[784, 0.15], [622, 0.15], [523, 0.15], [392, 0.4, 'triangle']],
   assign: [[659, 0.08], [784, 0.08], [988, 0.2]],
+  remind: [[784, 0.12], [0, 0.05], [988, 0.12], [0, 0.05], [784, 0.12], [0, 0.05], [988, 0.25]],
+  tick: [[1047, 0.06]],
+  tick0: [[1568, 0.12]],
+  draw: [[330, 0.05], [392, 0.05], [330, 0.05], [392, 0.05], [330, 0.05], [392, 0.05], [440, 0.05], [494, 0.05],
+    [523, 0.05], [587, 0.05], [659, 0.05], [698, 0.05], [0, 0.08], [523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.45]],
   dice: [[1200, 0.03], [900, 0.03], [1400, 0.03], [700, 0.03], [1100, 0.03], [1568, 0.12]],
 };
 
