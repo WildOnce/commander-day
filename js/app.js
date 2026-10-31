@@ -80,7 +80,7 @@ function onChange() {
 }
 const isFocused = () => {
   const a = document.activeElement;
-  return a && $app.contains(a) && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
+  return a && $app.contains(a) && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
 };
 document.addEventListener('focusout', () => setTimeout(() => { if (A.pending && !isFocused()) { A.pending = false; render(); } }, 60));
 
@@ -569,7 +569,7 @@ function liveView() {
     out.push(panel(`RUNDE ${s.live.n} · TIMER`, timerBlock(s.live), { cls: 'hi' }));
     for (const t of s.live.tables) {
       const { gid, g, rows, st } = tableInfo(s, t);
-      out.push(panel(`TISCH ${t.no}${t.auto ? ' · BAR-TISCH' : ''}`, `${rows}${g ? `<button class="btn sm block" style="margin-top:10px" data-act="nav" data-to="game/${gid}">${MODE === 'host' ? '♥ COUNTER ÖFFNEN' : '◉ LIVE ZUSCHAUEN'}</button>` : ''}`, { right: st }));
+      out.push(panel(`TISCH ${t.no}${t.auto ? ' · BAR-TISCH' : ''}`, `${rows}${g?.ended ? deckFix(g) : ''}${g ? `<button class="btn sm block" style="margin-top:10px" data-act="nav" data-to="game/${gid}">${MODE === 'host' ? '♥ COUNTER ÖFFNEN' : '◉ LIVE ZUSCHAUEN'}</button>` : ''}`, { right: st }));
     }
   } else out.push(panel('LIVE', '<div class="dim">KEINE LAUFENDE RUNDE.</div>'));
   const lb = S.leaderboard.filter((p) => p.games).slice(0, 12);
@@ -581,11 +581,25 @@ function liveView() {
     const res = r.tables.map((t) => {
       const g = s.G[gameId(r, t)];
       if (!g?.ended) return `<div class="small dim">TISCH ${t.no}: KEIN ERGEBNIS</div>`;
-      return `<div class="small" style="padding:3px 0"><b>TISCH ${t.no}</b> · ${[...g.ended.placements].sort((a, b) => a.place - b.place).map((x) => `${x.place}. ${esc(pname(x.pid))}${x.draw ? '½' : ''}`).join(' · ')}</div>`;
+      return `<div class="small" style="padding:3px 0"><b>TISCH ${t.no}</b> · ${[...g.ended.placements].sort((a, b) => a.place - b.place).map((x) => `${x.place}. ${esc(pname(x.pid))}${x.draw ? '½' : ''}`).join(' · ')}</div>${deckFix(g)}`;
     }).join('');
     out.push(panel(`RUNDE ${r.n} · ERGEBNISSE`, res));
   }
   return `<div class="stack">${out.join('')}</div>`;
+}
+
+/** Host only: fix which commander each player used in a finished game (feeds stats, awards, wrapped). */
+function deckFix(g) {
+  if (MODE !== 'host' || !g?.ended) return '';
+  const open = A.ui.fix?.[g.id];
+  const rows = !open ? '' : g.seats.map((s) => {
+    const decks = A.snap.P[s.pid]?.decks || [];
+    const opts = decks.map((d) => `<option value="${esc(d.id)}" ${d.id === s.deckId ? 'selected' : ''}>${esc(d.name)}</option>`).join('');
+    const cur = decks.some((d) => d.id === s.deckId) ? '' : `<option value="" selected>${esc(s.deckName || '—')}</option>`;
+    return `<div class="between" style="gap:8px;padding:4px 0"><b class="up small">${esc(pname(s.pid))}</b>
+      <select class="in" style="max-width:62%;padding:6px 8px" data-chg="h-gdeck" data-g="${esc(g.id)}" data-p="${esc(s.pid)}">${cur}${opts}</select></div>`;
+  }).join('');
+  return `<button class="chip" style="margin:6px 0" data-act="h-gfix" data-g="${esc(g.id)}">✎ COMMANDER ${open ? 'FERTIG' : 'ÄNDERN'}</button>${rows}`;
 }
 
 /** One table of the live round: player rows (life, counters, placement) and a status chip. */
@@ -821,6 +835,17 @@ const actions = {
   'deck-top'(el) { if (!me()) return render(); const m = me(); const x = m.decks.find((y) => y.id === el.dataset.id); putPlayer({ ...m, decks: [x, ...m.decks.filter((y) => y.id !== x.id)] }); },
 
   // host
+  'h-gfix'(el) { (A.ui.fix ||= {})[el.dataset.g] = !A.ui.fix[el.dataset.g]; render(); },
+  'h-gdeck'(el) {
+    const k = 'game/' + el.dataset.g; const cur = store.get(k);
+    if (!cur?.ended) return toast('NUR BEI BEENDETEN SPIELEN');
+    const g = structuredClone(cur); const s = g.seats.find((x) => x.pid === el.dataset.p);
+    const d = A.snap.P[s?.pid]?.decks?.find((x) => x.id === el.value);
+    if (!s || !d) return;
+    s.deckId = d.id; s.deckName = d.name; s.partner = !!d.partner;
+    store.put(k, g); el.blur();
+    toast(`COMMANDER GEÄNDERT · ${esc(pname(s.pid))} → ${esc(d.name)}`);
+  },
   'h-toggle'(el) { putCfg({ [el.dataset.f]: !A.snap.config[el.dataset.f] }); },
   'h-draw'() {
     const s = A.snap;
