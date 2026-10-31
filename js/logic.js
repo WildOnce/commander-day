@@ -286,6 +286,16 @@ export function gameStart(g, round) {
   return Math.max(g.startedAt || 0, ts && ts < (g.ended?.at || Infinity) ? ts : 0);
 }
 
+/** Points for a finished game: winner = players at the table, everyone else = players − place
+ *  (4er: 4/2/1/0 · 3er: 3/1/0 · 2er: 2/0). Players tied for first (time out) share the points of the places they hold. */
+export function gamePoints(g) {
+  const n = g.seats.length; const pl = g.ended?.placements || [];
+  const at = (place) => (place === 1 ? n : Math.max(0, n - place));
+  const tied = pl.filter((x) => x.place === 1 && x.draw).length;
+  const share = tied ? Math.round(Array.from({ length: tied }, (_, i) => at(i + 1)).reduce((a, b) => a + b, 0) / tied) : 0;
+  return Object.fromEntries(pl.map((x) => [x.pid, x.place === 1 && x.draw ? share : at(x.place)]));
+}
+
 export function computeStats(snap) {
   const { players, games, rounds, P } = snap;
   const R = Object.fromEntries(rounds.map((r) => [r.id, r]));
@@ -333,18 +343,19 @@ export function computeStats(snap) {
       if (e.d < 0) st[e.pid].lifeLost -= e.d; else st[e.pid].lifeGained += e.d;
       st[e.pid].taps++;
     }
+    const pts = g.ended ? gamePoints(g) : {};
     if (g.ended) for (const pl of g.ended.placements) {
       const p = st[pl.pid]; if (!p) continue;
       const seat = g.seats.find((s) => s.pid === pl.pid);
-      p.finished++; p.placeSum += pl.place;
+      p.finished++; p.placeSum += pl.place; p.points += pts[pl.pid] || 0;
       if (pl.place === 1 && !pl.draw) {
-        p.wins++; p.points += 3;
+        p.wins++;
         const t = g.ended.at - start;
         if (t > 0 && (p.fastestWin == null || t < p.fastestWin)) p.fastestWin = t;
         if ((seat?.minLife ?? 40) <= 10) p.comeback++;
         const dname = seat?.deckName || '—';
         p.decks[dname].wins++; cmdrs[dname].wins++;
-      } else if (pl.place === 1 && pl.draw) { p.draws++; p.points += 1; }
+      } else if (pl.place === 1 && pl.draw) p.draws++;
     }
   }
   // round-level bar time for unseated present players is ignored (kein Stress)
@@ -373,7 +384,7 @@ const maxBy = (arr, f) => arr.filter((x) => f(x) != null && f(x) > 0).sort((a, b
 
 /** Every award with its icon and a plain-language explanation of how it is decided. */
 export const AWARD_INFO = [
-  { key: 'best', sprite: 'trophy', title: 'BESTER SPIELER', desc: 'Meiste Punkte des Tages: Sieg = 3, Unentschieden = 1. Bei Gleichstand zählen die Siege.' },
+  { key: 'best', sprite: 'trophy', title: 'BESTER SPIELER', desc: 'Meiste Punkte des Tages. Pro Spiel: 4er-Tisch 4/2/1/0, 3er 3/1/0, 2er 2/0 für Platz 1/2/3/4; bei Zeitablauf teilen sich die Überlebenden die Punkte ihrer Plätze. Bei Gleichstand zählen die Siege.' },
   { key: 'cmdr', sprite: 'sword', title: 'STÄRKSTER COMMANDER', desc: 'Der Commander mit den meisten Siegen – bei Gleichstand die bessere Siegquote.' },
   { key: 'fastwin', sprite: 'rider', title: 'SCHNELLSTER SIEG', desc: 'Kürzeste Zeit vom Rundenstart bis zum Sieg (alle anderen am Tisch raus).' },
   { key: 'fastout', sprite: 'skull', title: 'SPEEDRUN ZUM TRESEN', desc: 'Wer am schnellsten nach Rundenstart ausgeschieden ist. Mehr Zeit für Bier & Dart.' },

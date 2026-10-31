@@ -414,7 +414,7 @@ function statsView() {
   const lb = S.leaderboard.filter((p) => p.games);
   const out = [topbar('// LIVE-STATISTIK')];
   out.push(`<div class="row" style="gap:14px">${sprite('trophy', 4, 'bob')}<div class="h1">LEADERBOARD</div></div>`);
-  out.push(panel('PUNKTE · SIEG 3 · DRAW 1', lb.map((p, i) => leader(`${String(i + 1).padStart(2, '0')}  ${p.name}`, `${p.wins}W · ${p.points} PTS`, i === 0 ? 'gold' : p.pid === A.me ? '' : 'muted')).join('') || '<div class="dim small">NOCH KEINE SPIELE BEENDET.</div>'));
+  out.push(panel('PUNKTE · 4ER: 4·2·1·0', lb.map((p, i) => leader(`${String(i + 1).padStart(2, '0')}  ${p.name}`, `${p.wins}W · ${p.points} PTS`, i === 0 ? 'gold' : p.pid === A.me ? '' : 'muted')).join('') || '<div class="dim small">NOCH KEINE SPIELE BEENDET.</div>'));
   if (m) out.push(panel(`DEINE STATS · ${m.name}`,
     leader('SPIELE', m.games) + leader('SIEGE', m.wins, 'gold') + leader('UNENTSCHIEDEN', m.draws) + leader('Ø PLATZ', m.avgPlace ? m.avgPlace.toFixed(1) : '—') +
     leader('AUSGESCHIEDEN', `${m.outs}×`) + leader('SCHNELLSTES AUS', m.fastestOut ? dur(m.fastestOut) : '—') + leader('SCHNELLSTER SIEG', m.fastestWin ? dur(m.fastestWin) : '—') +
@@ -425,7 +425,7 @@ function statsView() {
     <span style="width:44px;text-align:center">${sprite(a.sprite, a.sprite === 'rider' ? 2 : 3)}</span><div style="flex:1;min-width:0"><div class="tag">${esc(a.title)}</div><div class="up">${esc(a.name)}</div><div class="small muted" style="margin-top:2px">${esc(a.desc || '')}</div></div><span class="small muted" style="text-align:right">${esc(a.value || '')}</span></div>`).join('')));
   out.push(`<details class="panel"><summary class="tag" style="cursor:pointer;list-style:none">ⓘ SO FUNKTIONIEREN DIE AWARDS ▾</summary>${AWARD_INFO.map((a) => `<div class="row" style="gap:12px;padding:8px 0;border-bottom:1px solid var(--line);align-items:flex-start">
     <span style="width:44px;text-align:center;flex:none">${sprite(a.sprite, a.sprite === 'rider' ? 2 : 3)}</span><div><div class="up"><b>${esc(a.title)}</b></div><div class="small muted">${esc(a.desc)}</div></div></div>`).join('')}
-    <div class="small muted" style="margin-top:8px">Punkte: Sieg = 3 · Unentschieden (Zeit abgelaufen) = 1 · ausgeschieden = 0. Zeiten zählen ab Start des Rundentimers.</div></details>`);
+    <div class="small muted" style="margin-top:8px">Punkte pro Spiel nach Platz: 4er-Tisch 4 · 2 · 1 · 0 – 3er-Tisch 3 · 1 · 0 – 2er-Tisch 2 · 0. Zeit abgelaufen: die Überlebenden teilen sich die Punkte ihrer Plätze (z. B. 2 Überlebende am 4er-Tisch je 3). Zeiten zählen ab Start des Rundentimers.</div></details>`);
   if (S.commanders.length) out.push(panel('COMMANDER WINRATE', S.commanders.slice(0, 12).map((c) => leader(c.name, `${c.wins}/${c.games} · ${Math.round(c.rate * 100)}%`)).join('')));
   return `<div class="stack">${out.join('')}</div>`;
 }
