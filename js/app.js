@@ -27,7 +27,14 @@ async function boot() {
   if (MODE === 'host') setInterval(() => { if (store.prefix && store.get('config')) store.resync(); }, 120000); // keep the brokers' copy complete
   if (MODE === 'tv') { // TV: refresh 'vor x min', keep screen on, scale the 960x540 layout to the screen
     setInterval(render, 30000); wake(true);
-    const fit = () => { document.body.style.zoom = Math.min(innerWidth / 960, innerHeight / 540); };
+    // TVs cut off the edges (overscan): shrink to `scale` and centre. Tune with tv.html?c=CODE&scale=0.9 (remembered).
+    const sc = parseFloat(params.get('scale')); if (sc >= 0.5 && sc <= 1) ls.set('cz.tvscale', sc);
+    const fit = () => {
+      const z = Math.min(innerWidth / 960, innerHeight / 540) * (ls.get('cz.tvscale') || 0.92);
+      document.body.style.zoom = z;
+      $app.style.paddingTop = `${Math.max(0, (innerHeight / z - 540) / 2)}px`;
+      $app.style.margin = '0 auto'; $app.style.width = '960px';
+    };
     fit(); window.addEventListener('resize', fit);
   }
   if (DEMO) {
