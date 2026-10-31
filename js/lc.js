@@ -83,8 +83,10 @@ export function initLifeInput() {
     const el = e.target.closest('[data-tap]');
     if (!el) return;
     e.preventDefault();
-    const h = (A.hold = { gid: el.dataset.g, i: +el.dataset.i, dir: +el.dataset.tap, fired: false });
+    if (A.hold) clearTimeout(A.hold.t); // second finger: never leave the first hold repeating forever
+    const h = (A.hold = { gid: el.dataset.g, i: +el.dataset.i, dir: +el.dataset.tap, fired: false, at: Date.now() });
     h.t = setTimeout(function rep() {
+      if (A.hold !== h || Date.now() - h.at > 8000) { if (A.hold === h) A.hold = null; return; } // stale or stuck hold
       h.fired = true; bump(h.gid, h.i, h.dir * 10); buzz(18);
       h.t = setTimeout(rep, 420);
     }, 450);
@@ -97,6 +99,7 @@ export function initLifeInput() {
   };
   window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', () => { if (A.hold) { clearTimeout(A.hold.t); A.hold = null; } });
+  document.addEventListener('visibilitychange', () => { if (A.hold) { clearTimeout(A.hold.t); A.hold = null; } });
   document.addEventListener('contextmenu', (e) => { if (e.target.closest('.lcw')) e.preventDefault(); });
 
   // Seats: drag a player's name onto another tile to swap places.
