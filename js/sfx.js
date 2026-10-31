@@ -3,14 +3,19 @@ import { ls } from './util.js';
 
 let ac = null;
 // browsers only allow audio after a user gesture: create/resume the context on the first touch
+// iOS only unlocks on touchend/click (not touchstart) and only if a sound is started inside the gesture;
+// audioSession 'playback' (iOS 17+) lets the sounds play even with the silent switch on.
 const unlock = () => {
   try {
+    try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch {}
     ac ||= new (window.AudioContext || window.webkitAudioContext)();
-    if (ac.state === 'suspended') ac.resume();
+    if (ac.state === 'running' && ac.__ok) return;
+    ac.resume?.().catch?.(() => {});
+    const src = ac.createBufferSource(); src.buffer = ac.createBuffer(1, 1, 22050); src.connect(ac.destination); src.start(0);
+    if (ac.state === 'running') ac.__ok = true;
   } catch {}
 };
-document.addEventListener('pointerdown', unlock, { capture: true, passive: true });
-document.addEventListener('keydown', unlock, { capture: true }); // TV remote (Fire TV: OK button)
+for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown', 'keyup']) document.addEventListener(ev, unlock, { capture: true, passive: true }); // keys: TV remote
 export const sfxReady = () => ac?.state === 'running';
 
 export const sfxOn = () => ls.get('cz.sfx', true) !== false;
@@ -34,14 +39,15 @@ const SFX = {
 };
 
 export function sfx(name) {
-  if (!sfxOn() || !ac || ac.state !== 'running') return;
+  if (!sfxOn() || !ac) return;
+  if (ac.state !== 'running') { ac.resume?.().then(() => { if (ac.state === 'running') sfx(name); }).catch?.(() => {}); return; } // e.g. iOS 'interrupted' after backgrounding
   try {
     let t = ac.currentTime + 0.01;
     for (const [f, d, wave = 'square'] of SFX[name] || []) {
       if (f) {
         const o = ac.createOscillator(), g = ac.createGain();
         o.type = wave; o.frequency.value = f;
-        g.gain.setValueAtTime(0.07, t);
+        g.gain.setValueAtTime(wave === 'square' ? 0.14 : 0.3, t);
         g.gain.exponentialRampToValueAtTime(0.0001, t + d);
         o.connect(g).connect(ac.destination);
         o.start(t); o.stop(t + d + 0.02);

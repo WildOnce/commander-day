@@ -487,13 +487,25 @@ function hostJoinView() {
 }
 
 /** Funny live ticker built from all game logs. */
-function feed(limit = 14) {
+function feed(limit = 30) {
   const s = A.snap;
   const R = Object.fromEntries(s.rounds.map((r) => [r.id, r]));
   const ev = [];
   const N = (pid) => `<b>${esc(pname(pid))}</b>`;
+  for (const r of s.rounds) { // round milestones
+    const tm = r.timer; if (!tm?.startedAt) continue;
+    const RT = `RUNDE ${r.n}`; const ti = timerInfo(r, s.config);
+    ev.push({ t: tm.startedAt, s: 'star', c: 'acc', m: `<b>${RT} startet!</b> ${s.config.playMin} Minuten auf der Uhr ⏱`, T: RT });
+    const otAt = tm.startedAt + ti.playMs + (tm.pausedTotal || 0);
+    if ((ti.phase === 'ot' || ti.phase === 'ended') && (!tm.endedAt || tm.endedAt > otAt)) ev.push({ t: otAt, s: 'skull', c: 'alert', m: `<b>OVERTIME!</b> Noch ${s.config.otMin} Minuten – jetzt wird's eng 🔥`, T: RT });
+    if (ti.phase === 'ended') ev.push({ t: tm.endedAt || otAt + ti.otMs, s: 'shield', m: `<b>${RT}</b> ist vorbei. Alle an die Bar 🍻`, T: RT });
+  }
   for (const g of s.games) {
     const T = `TISCH ${g.tableNo}`;
+    if (g.startedAt) ev.push({ t: g.startedAt, s: 'sword', m: `${T} legt los: ${g.seats.map((x) => N(x.pid)).join(' · ')} ⚔`, T });
+    const acc = {}; // merge rapid taps (commander damage, poison, tax) into one line
+    const merge = (key, e, mk) => { const a = acc[key]; if (a && e.t - a.t < 8000) { a.n += e.d; a.t = e.t; a.x.t = e.t; a.x.m = mk(a.n); } else { const x = { t: e.t, ...mk.base, m: mk(e.d) }; acc[key] = { n: e.d, t: e.t, x }; pushLife(e.pid, x); } };
+    const tot = {};
     const life = {}; for (const st of g.seats) life[st.pid] = 40;
     const warned = {}, poisonW = {}, cmdW = {}, outEv = {}, lifeEv = {}, revivedAt = {};
     const FIX = 180000; // a revive means the K.O. was a mistake: hide that player's hits/heals around it (corrections)
@@ -503,13 +515,23 @@ function feed(limit = 14) {
         const before = life[e.pid]; life[e.pid] += e.d;
         const fixing = e.t - (revivedAt[e.pid] || -Infinity) < FIX;
         if (e.d <= -10 && !fixing) pushLife(e.pid, { t: e.t, s: 'axe', c: 'alert', m: `${N(e.pid)} kassiert ${e.d} auf einen Schlag 💥`, T });
+        else if (e.d <= -5 && !fixing) pushLife(e.pid, { t: e.t, s: 'crosshair', m: `${N(e.pid)} verliert ${-e.d} Leben → ${life[e.pid]}`, T });
         else if (e.d >= 10 && !fixing) pushLife(e.pid, { t: e.t, s: 'heart', m: `${N(e.pid)} heilt +${e.d}. Frech. ❤️`, T });
+        else if (e.d >= 5 && !fixing) pushLife(e.pid, { t: e.t, s: 'heart', m: `${N(e.pid)} gönnt sich +${e.d} Leben → ${life[e.pid]}`, T });
+        if (before > 20 && life[e.pid] <= 20 && life[e.pid] > 10 && !warned['h' + e.pid] && !fixing) { warned['h' + e.pid] = 1; pushLife(e.pid, { t: e.t, s: 'shield', m: `${N(e.pid)} ist unter 20 – die Hälfte ist weg 🩸`, T }); }
+        if (before > 5 && life[e.pid] <= 5 && life[e.pid] > 0 && !warned['f' + e.pid] && !fixing) { warned['f' + e.pid] = 1; pushLife(e.pid, { t: e.t, s: 'ghost', c: 'alert', m: `${N(e.pid)} hängt am seidenen Faden: ${life[e.pid]} Leben 😬`, T }); }
         if (before > 10 && life[e.pid] <= 10 && life[e.pid] > 0 && !warned[e.pid] && !fixing) { warned[e.pid] = 1; pushLife(e.pid, { t: e.t, s: 'potion', c: 'acc', m: `${N(e.pid)} kommt ins Schwitzen 💦 nur noch ${life[e.pid]} Leben`, T }); }
       } else if (e.k === 'cmd') {
+        const ck = e.pid + '>' + e.from; tot[ck] = (tot[ck] || 0) + e.d;
+        if (e.d > 0) { const mk = (n) => `${N(e.from)}s Commander trifft ${N(e.pid)} für ${n} ⚔ (${tot[ck]}/21)`; mk.base = { s: 'sword', T }; merge('c' + ck, e, mk); }
         const seat = g.seats.find((x) => x.pid === e.pid);
         const v = Math.max(...(seat?.cmd[e.from] || [0]));
         if (v >= 15 && !cmdW[e.pid + e.from]) { cmdW[e.pid + e.from] = 1; ev.push({ t: e.t, s: 'sword', c: 'alert', m: `${N(e.from)}s Commander klopft bei ${N(e.pid)} an ⚔ ${v}/21`, T }); }
+      } else if (e.k === 'tax' && e.d > 0) {
+        const mk = (n) => `${N(e.pid)} castet den Commander erneut 🔁 (Tax +${2 * n})`; mk.base = { s: 'rider', T }; merge('t' + e.pid, e, mk);
       } else if (e.k === 'poison') {
+        tot['p' + e.pid] = (tot['p' + e.pid] || 0) + e.d;
+        if (e.d > 0) { const mk = () => `${N(e.pid)} bekommt Gift ☠ ${tot['p' + e.pid]}/10`; mk.base = { s: 'potion', T }; merge('p' + e.pid, e, mk); }
         const seat = g.seats.find((x) => x.pid === e.pid);
         if (seat?.poison >= 7 && !poisonW[e.pid]) { poisonW[e.pid] = 1; ev.push({ t: e.t, s: 'potion', c: 'alert', m: `${N(e.pid)} wird langsam grün im Gesicht ☠`, T }); }
       } else if (e.k === 'revive') {

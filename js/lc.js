@@ -445,7 +445,7 @@ export const lcActions = {
     mutate(gid, (g) => {
       const s = g.seats[i];
       if (f === 'cmd') setCmd(g, s.pid, el.dataset.o, +el.dataset.x, d);
-      else if (f === 'tax') s.tax[+el.dataset.x] = Math.max(0, s.tax[+el.dataset.x] + d);
+      else if (f === 'tax') { s.tax[+el.dataset.x] = Math.max(0, s.tax[+el.dataset.x] + d); g.log.push({ t: Date.now(), pid: s.pid, k: 'tax', d }); }
       else { s[f] = Math.max(0, s[f] + d); g.log.push({ t: Date.now(), pid: s.pid, k: f, d }); }
     });
   },
