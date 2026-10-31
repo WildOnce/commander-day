@@ -492,13 +492,16 @@ function feed(limit = 14) {
   for (const g of s.games) {
     const T = `TISCH ${g.tableNo}`;
     const life = {}; for (const st of g.seats) life[st.pid] = 40;
-    const warned = {}, poisonW = {}, cmdW = {}, outEv = {};
+    const warned = {}, poisonW = {}, cmdW = {}, outEv = {}, lifeEv = {}, revivedAt = {};
+    const FIX = 180000; // a revive means the K.O. was a mistake: hide that player's hits/heals around it (corrections)
+    const pushLife = (pid, x) => { ev.push(x); (lifeEv[pid] ||= []).push(x); };
     for (const e of g.log) {
       if (e.k === 'life') {
         const before = life[e.pid]; life[e.pid] += e.d;
-        if (e.d <= -10) ev.push({ t: e.t, s: 'axe', c: 'alert', m: `${N(e.pid)} kassiert ${e.d} auf einen Schlag 💥`, T });
-        else if (e.d >= 10) ev.push({ t: e.t, s: 'heart', m: `${N(e.pid)} heilt +${e.d}. Frech. ❤️`, T });
-        if (before > 10 && life[e.pid] <= 10 && life[e.pid] > 0 && !warned[e.pid]) { warned[e.pid] = 1; ev.push({ t: e.t, s: 'potion', c: 'acc', m: `${N(e.pid)} kommt ins Schwitzen 💦 nur noch ${life[e.pid]} Leben`, T }); }
+        const fixing = e.t - (revivedAt[e.pid] || -Infinity) < FIX;
+        if (e.d <= -10 && !fixing) pushLife(e.pid, { t: e.t, s: 'axe', c: 'alert', m: `${N(e.pid)} kassiert ${e.d} auf einen Schlag 💥`, T });
+        else if (e.d >= 10 && !fixing) pushLife(e.pid, { t: e.t, s: 'heart', m: `${N(e.pid)} heilt +${e.d}. Frech. ❤️`, T });
+        if (before > 10 && life[e.pid] <= 10 && life[e.pid] > 0 && !warned[e.pid] && !fixing) { warned[e.pid] = 1; pushLife(e.pid, { t: e.t, s: 'potion', c: 'acc', m: `${N(e.pid)} kommt ins Schwitzen 💦 nur noch ${life[e.pid]} Leben`, T }); }
       } else if (e.k === 'cmd') {
         const seat = g.seats.find((x) => x.pid === e.pid);
         const v = Math.max(...(seat?.cmd[e.from] || [0]));
@@ -509,7 +512,8 @@ function feed(limit = 14) {
       } else if (e.k === 'revive') {
         // revived (e.g. accidental K.O.): the K.O. line disappears from the ticker
         const i = ev.indexOf(outEv[e.pid]); if (i >= 0) { ev.splice(i, 1); ev.push({ t: e.t, s: 'zombie', c: 'acc', m: `${N(e.pid)} ist wieder im Spiel 🧟`, T }); }
-        outEv[e.pid] = null;
+        for (const x of lifeEv[e.pid] || []) if (e.t - x.t < FIX) { const j = ev.indexOf(x); if (j >= 0) ev.splice(j, 1); }
+        outEv[e.pid] = null; revivedAt[e.pid] = e.t;
       } else if (e.k === 'out') {
         if (e.cause === 'mill') ev.push({ t: e.t, s: 'crab', c: 'alert', m: e.by ? `${N(e.pid)} wurde von ${N(e.by)} gemillt 📚${isFugbaum(e.by) ? ' – Danke für den großen Spaß, Filippo. 🦀' : ''}` : `${N(e.pid)} hat sich selbst gemillt. Respekt. 📚`, T });
         else { const extra = feedKo(g, e); ev.push({ t: e.t, s: feedSprite(g, e), c: 'alert', m: `${N(e.pid)} ist raus${e.by ? ` – danke, ${N(e.by)}` : ''}. ${extra ? esc(extra) : 'Ab an die Bar 🍺'}`, T }); }
