@@ -492,7 +492,7 @@ function feed(limit = 14) {
   for (const g of s.games) {
     const T = `TISCH ${g.tableNo}`;
     const life = {}; for (const st of g.seats) life[st.pid] = 40;
-    const warned = {}, poisonW = {}, cmdW = {};
+    const warned = {}, poisonW = {}, cmdW = {}, outEv = {};
     for (const e of g.log) {
       if (e.k === 'life') {
         const before = life[e.pid]; life[e.pid] += e.d;
@@ -506,9 +506,14 @@ function feed(limit = 14) {
       } else if (e.k === 'poison') {
         const seat = g.seats.find((x) => x.pid === e.pid);
         if (seat?.poison >= 7 && !poisonW[e.pid]) { poisonW[e.pid] = 1; ev.push({ t: e.t, s: 'potion', c: 'alert', m: `${N(e.pid)} wird langsam grün im Gesicht ☠`, T }); }
+      } else if (e.k === 'revive') {
+        // revived (e.g. accidental K.O.): the K.O. line disappears from the ticker
+        const i = ev.indexOf(outEv[e.pid]); if (i >= 0) { ev.splice(i, 1); ev.push({ t: e.t, s: 'zombie', c: 'acc', m: `${N(e.pid)} ist wieder im Spiel 🧟`, T }); }
+        outEv[e.pid] = null;
       } else if (e.k === 'out') {
         if (e.cause === 'mill') ev.push({ t: e.t, s: 'crab', c: 'alert', m: e.by ? `${N(e.pid)} wurde von ${N(e.by)} gemillt 📚${isFugbaum(e.by) ? ' – Danke für den großen Spaß, Filippo. 🦀' : ''}` : `${N(e.pid)} hat sich selbst gemillt. Respekt. 📚`, T });
         else { const extra = feedKo(g, e); ev.push({ t: e.t, s: feedSprite(g, e), c: 'alert', m: `${N(e.pid)} ist raus${e.by ? ` – danke, ${N(e.by)}` : ''}. ${extra ? esc(extra) : 'Ab an die Bar 🍺'}`, T }); }
+        outEv[e.pid] = ev[ev.length - 1];
       } else if (e.k === 'end') {
         const w = g.ended?.placements.find((x) => x.place === 1 && !x.draw);
         ev.push({ t: e.t, s: w ? 'trophy' : 'shield', c: 'gold', m: w ? `${N(w.pid)} gewinnt ${T}! 🏆` : `${T} endet unentschieden 🤝`, T });
