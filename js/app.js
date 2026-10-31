@@ -326,13 +326,28 @@ function freePanel() {
   const free = freePlayers(s);
   const size = s.config.tableSize;
   const ti = timerInfo(s.live, s.config);
-  const info = !s.config.autoTables ? 'AUTO-TISCHE SIND AUS.'
+  const info = !s.config.autoTables ? 'Lust auf mehr? Startet unten selbst ein Zwischenspiel.'
     : ti.phase === 'play' && ti.left < s.config.autoMinLeft * 60000 ? `ZU WENIG ZEIT FÜR EINEN NEUEN TISCH (< ${s.config.autoMinLeft} MIN).`
     : free.length >= size && !proposeAutoTable(s) ? 'Ihr habt gerade schon zusammen gespielt – der nächste Bar-Tisch entsteht, sobald Spieler von anderen Tischen frei werden.'
     : `Sobald ${size} Spieler frei sind, entsteht automatisch ein neuer Tisch.`;
   return panel('BAR · FREIE SPIELER', `<div class="row" style="gap:14px">${sprite('beer', 4, 'bob')}<div class="grow"><div class="h2">${free.length}/${size} FREI</div><div class="small muted">${info}</div></div></div>
     <div class="row wrap" style="margin-top:8px">${free.map((f) => `<span class="chip ${f.pid === A.me ? 'sel' : ''}">${esc(pname(f.pid))}</span>`).join('') || '<span class="dim small">NIEMAND</span>'}</div>
+    ${sideGame(free, ti)}
     ${s.config.autoTables ? `<div class="toggle ${me()?.pauseRound === s.live.id ? 'on' : ''}" data-act="pause" style="margin-top:6px"><span><span class="small"><b>ICH MACH PAUSE 🍺</b></span><br><span class="tag">diese Runde nicht mehr einplanen</span></span><span class="sw"></span></div>` : ''}`);
+}
+
+/** Players who are out start a side game (2–4 free players) on their own: an extra table in the running round,
+ *  same timer, counts for stats and live view like any other table. */
+function sideGame(free, ti) {
+  if (!A.me || !free.some((f) => f.pid === A.me) || ti.phase === 'ended' || ti.phase === 'idle') return '';
+  const sel = (A.ui.side ||= [A.me]).filter((p) => p === A.me || free.some((f) => f.pid === p));
+  if (!sel.includes(A.me)) sel.unshift(A.me);
+  A.ui.side = sel;
+  const ok = sel.length >= 2 && sel.length <= 4;
+  return `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><div class="tag">⚔ ZWISCHENSPIEL STARTEN · MITSPIELER ANTIPPEN (2–4)</div>
+    <div class="row wrap" style="margin:8px 0">${free.map((f) => `<button class="chip ${sel.includes(f.pid) ? 'sel' : ''}" data-act="side-pick" data-id="${esc(f.pid)}">${esc(pname(f.pid))}</button>`).join('')}</div>
+    <button class="btn pri block" data-act="side-start" ${ok ? '' : 'disabled'}>▶ ZWISCHENSPIEL MIT ${sel.length} SPIELERN</button>
+    <div class="tag" style="margin-top:6px;text-transform:none">Läuft mit dem Rundentimer und zählt für Statistik &amp; Live-Ticker.</div></div>`;
 }
 
 function assignOverlay() {
@@ -857,6 +872,23 @@ const actions = {
   'deck-top'(el) { if (!me()) return render(); const m = me(); const x = m.decks.find((y) => y.id === el.dataset.id); putPlayer({ ...m, decks: [x, ...m.decks.filter((y) => y.id !== x.id)] }); },
 
   // host
+  'side-pick'(el) {
+    const id = el.dataset.id; if (id === A.me) return;
+    const sel = A.ui.side || [A.me];
+    A.ui.side = sel.includes(id) ? sel.filter((p) => p !== id) : sel.length < 4 ? [...sel, id] : sel;
+    render();
+  },
+  'side-start'() {
+    refresh();
+    const s = A.snap; const free = new Set(freePlayers(s).map((f) => f.pid));
+    const sel = (A.ui.side || []).filter((p) => free.has(p));
+    if (!s.live || !sel.includes(A.me) || sel.length < 2 || sel.length > 4) return toast('MITSPIELER SIND NICHT MEHR FREI'), render();
+    if (timerInfo(s.live, s.config).phase === 'ended') return toast('RUNDE IST SCHON VORBEI');
+    if (!confirm(`Zwischenspiel starten mit ${sel.map((p) => pname(p)).join(', ')}?`)) return;
+    addTable(s.live, { id: 'z' + uid(5), players: sel });
+    A.ui.side = null;
+    toast('⚔ ZWISCHENSPIEL ANGELEGT');
+  },
   'h-gfix'(el) { (A.ui.fix ||= {})[el.dataset.g] = !A.ui.fix[el.dataset.g]; render(); },
   'h-gdeck'(el) {
     const k = 'game/' + el.dataset.g; const cur = store.get(k);
