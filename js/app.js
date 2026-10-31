@@ -681,11 +681,11 @@ function tick() {
       if (ti.phase === 'ended') { toast('<b class="alert">TIME OUT</b> · SPIEL BEENDET → UNENTSCHIEDEN', 5000); buzz([300, 100, 300]); if (MODE !== 'tv') sfx('end'); }
     }
     if (r.id === A.snap.live?.id) A.lastPhase = key;
-    // phones: reminder at 10 and 5 minutes left, beep countdown over the last 10 seconds (play time and overtime)
-    if (MODE !== 'tv' && r.id === A.snap.live?.id && !ti.paused && (ti.phase === 'play' || ti.phase === 'ot')) {
+    // phones: reminder at 10 and 5 minutes left; phones + TV: beep countdown over the last 10 seconds (play time and overtime)
+    if (r.id === A.snap.live?.id && !ti.paused && (ti.phase === 'play' || ti.phase === 'ot')) {
       const sec = Math.ceil(ti.left / 1000);
       const once = (k, fn) => { if (!A.cd) A.cd = {}; if (!A.cd[k]) { A.cd[k] = 1; fn(); } };
-      for (const m of ti.phase === 'play' ? [10, 5] : []) if (sec <= m * 60 && sec > m * 60 - 5) once(`${r.id}:m${m}`, () => { toast(`⏳ <b>NOCH ${m} MINUTEN</b>`, 4000); buzz([100, 60, 100]); sfx('remind'); });
+      for (const m of ti.phase === 'play' && MODE !== 'tv' ? [10, 5] : []) if (sec <= m * 60 && sec > m * 60 - 5) once(`${r.id}:m${m}`, () => { toast(`⏳ <b>NOCH ${m} MINUTEN</b>`, 4000); buzz([100, 60, 100]); sfx('remind'); });
       if (sec >= 1 && sec <= 10) once(`${key}:s${sec}`, () => { sfx(sec === 1 ? 'tick0' : 'tick'); if (sec <= 3) buzz(40); });
     }
   }
