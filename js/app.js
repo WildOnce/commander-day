@@ -77,6 +77,8 @@ document.addEventListener('focusout', () => setTimeout(() => { if (A.pending && 
 /* ═════════════════════ render ═════════════════════ */
 
 function doRender() {
+  // never swap the DOM under a holding finger: iOS would lose the release and the hold would repeat forever
+  if (A.hold && Date.now() - A.hold.at < 4000) { A.hold.pending = true; return; }
   if (A.drag?.on && Date.now() - A.drag.t < 15000) return; // never swap the DOM under a finger that is dragging a seat; drop re-renders
   if (store.prefix) refresh();
   const v = view();
